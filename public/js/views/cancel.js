@@ -52,7 +52,7 @@ export default {
         form.innerHTML = String(html`<div class="notice ok">${icon('check', 18)}<div><b>Your cancellation has been received.</b><br>
           Reference: <b class="mono">${r.reference}</b><br>Received: ${fmtDate(r.receivedAt)} ${new Date(r.receivedAt).toLocaleTimeString()}<br>
           ${r.processedAutomatically ? 'Your subscription has been cancelled effective at the end of the current billing period.' : 'We will process your cancellation and confirm it to you.'}</div></div>
-          <button class="btn btn-ghost" style="margin-top:16px" onclick="window.print()">${icon('download', 15)} Print confirmation</button>`);
+          <button class="btn btn-ghost print-btn" style="margin-top:16px" onclick="window.print()">${icon('download', 15)} Print confirmation</button>`);
       } catch (err) { formError(form, err.message); setBusy(btn, false); }
     });
   },

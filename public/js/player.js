@@ -1,3 +1,4 @@
+import { curPath } from './nav.js';
 // MedTranslate player
 // ─────────────────────────────────────────────────────────────────────────────
 // • One <video> element for the whole session. Switching subtitle or audio
@@ -117,7 +118,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     const legal = e.status === 451;
     box.innerHTML = String(html`<div><div style="display:grid;place-items:center;margin-bottom:12px">${icon(legal ? 'globe' : 'alert', 34)}</div>
       <h3>${legal ? 'Not available in your region' : 'Playback unavailable'}</h3><p>${e.message}</p>
-      ${legal && !state.user ? html`<a class="btn btn-accent btn-sm" href="/login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : ''}
+      ${legal && !state.user ? html`<a class="btn btn-accent btn-sm" href="/login?next=${encodeURIComponent(curPath())}">Sign in</a>` : ''}
       ${legal && state.user ? html`<a class="btn btn-accent btn-sm" href="/account/settings">Update your country</a>` : ''}
       ${!legal ? html`<button class="btn btn-glass btn-sm" data-retry>Try again</button>` : ''}</div>`);
     el.append(box);
@@ -290,7 +291,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     box.innerHTML = String(html`<div style="max-width:420px">${icon('lock', 30)}<h3 style="margin-top:12px">Preview ended</h3>
       <p>${needLogin ? 'Create a free account and choose a plan to watch the full course in every available language.' : 'This course is included in the Professional plan, or can be purchased individually.'}</p>
       <div class="row" style="justify-content:center">
-        ${needLogin ? html`<a class="btn btn-accent" href="/register?next=${encodeURIComponent(location.pathname)}">Create account</a><a class="btn btn-glass" href="/login?next=${encodeURIComponent(location.pathname)}">Sign in</a>`
+        ${needLogin ? html`<a class="btn btn-accent" href="/register?next=${encodeURIComponent(curPath())}">Create account</a><a class="btn btn-glass" href="/login?next=${encodeURIComponent(curPath())}">Sign in</a>`
           : html`<a class="btn btn-accent" href="/pricing">See plans</a>`}
       </div><button class="link-btn xs" style="margin-top:14px;color:#8FA1BA" data-replay>Replay preview</button></div>`);
     box.querySelector('[data-replay]').addEventListener('click', () => { box.remove(); S.previewHit = false; video.currentTime = 0; video.play(); });

@@ -8,7 +8,7 @@ export default {
     const c = await get(`/api/certificates/${encodeURIComponent(ctx.params.id)}`);
     const cme = c.kind === 'cme';
     return html`<section class="section-sm"><div class="container narrow">
-      <div class="row between no-print" style="margin-bottom:20px"><a href="/account/certificates">${icon('arrow', 14)} Back to certificates</a><button class="btn btn-ghost btn-sm" onclick="window.print()">${icon('download', 15)} Print / save as PDF</button></div>
+      <div class="row between no-print" style="margin-bottom:20px"><a href="/account/certificates">${icon('arrow', 14)} Back to certificates</a><button class="btn btn-ghost btn-sm print-btn" onclick="window.print()">${icon('download', 15)} Print / save as PDF</button></div>
       <div class="certificate">
         <span class="eyebrow">${cme ? 'CME/CPD certificate' : 'Record of completion'}</span>
         <h1 style="margin-top:12px">${c.holder}</h1>

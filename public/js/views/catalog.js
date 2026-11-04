@@ -1,3 +1,4 @@
+import { setUrl } from '../nav.js';
 import { html, icon, courseCard, skeletonCards, emptyState, $, $$ } from '../ui.js';
 import { state } from '../store.js';
 import { get } from '../api.js';
@@ -70,7 +71,7 @@ export default {
       let base = '/courses';
       if (spec && v.specialty === spec) { base = `/specialties/${spec}`; urlParams.delete('specialty'); }
       const qs = urlParams.toString();
-      history.replaceState({}, '', base + (qs ? `?${qs}` : ''));
+      setUrl(base + (qs ? `?${qs}` : ''), true);
       const my = ++token;
       const res = $('#results', root);
       res.style.opacity = '.6';

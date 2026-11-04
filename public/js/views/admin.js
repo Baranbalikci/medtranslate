@@ -1,3 +1,4 @@
+import { ask, curPath, curSearch } from '../nav.js';
 import { html, icon, fmtDate, fmtMoney, fmtTime, formData, setBusy, formError, toast, emptyState, esc } from '../ui.js';
 import { state, langInfo } from '../store.js';
 import { api, get, post, put, patch, del } from '../api.js';
@@ -299,7 +300,7 @@ export default function adminView() {
     },
 
     mount(root, ctx) {
-      const reload = () => ctx.navigate(location.pathname + location.search, { replace: true, keepScroll: true });
+      const reload = () => ctx.navigate(curPath() + curSearch(), { replace: true, keepScroll: true });
       const list = (s) => String(s || '').split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
       const handle = (sel, fn) => root.querySelectorAll(sel).forEach((f) => f.addEventListener('submit', async (e) => {
         e.preventDefault(); const b = f.querySelector('button:not([type=button])') || f.querySelector('button'); formError(f, ''); setBusy(b, true);
@@ -317,13 +318,13 @@ export default function adminView() {
           try { await post(`/api/admin/translations/${ctx.params.id}/release`, { audioMode: root.querySelector('#audio-mode')?.value }); toast('Language released.', 'success'); reload(); } catch (err) { toast(err.message + (err.details?.blockers ? ': ' + err.details.blockers.join(' ') : ''), 'error'); }
         }
         if (e.target.closest('[data-withdraw]')) {
-          if (!confirm('Withdraw this language from users?')) return;
+          if (!(await ask('Withdraw this language from users?'))) return;
           try { await post(`/api/admin/translations/${ctx.params.id}/release`, { action: 'withdraw' }); toast('Withdrawn.', 'success'); reload(); } catch (err) { toast(err.message, 'error'); }
         }
         const dg = e.target.closest('[data-del-gloss]');
         if (dg) { await del(`/api/admin/glossary/${dg.dataset.delGloss}`); reload(); }
         const cs = e.target.closest('[data-cancel-sub]');
-        if (cs && confirm('Cancel this subscription at period end?')) { await post(`/api/admin/subscriptions/${cs.dataset.cancelSub}/cancel`); toast('Cancelled.', 'success'); reload(); }
+        if (cs && await ask('Cancel this subscription at period end?')) { await post(`/api/admin/subscriptions/${cs.dataset.cancelSub}/cancel`); toast('Cancelled.', 'success'); reload(); }
       });
       root.addEventListener('change', async (e) => {
         const row = e.target.closest('tr[data-user]');
@@ -340,7 +341,7 @@ export default function adminView() {
       handle('#details', async (f, v) => { await patch(`/api/admin/courses/${id}`, { ...v, objectives: v.objectives.split('\n').map((x) => x.trim()).filter(Boolean) }); toast('Details saved.', 'success'); reload(); });
       handle('#license', async (f, v) => { await put(`/api/admin/courses/${id}/license`, { ...v, territories: list(v.territories).map((x) => x.toUpperCase()), languages: list(v.languages) }); toast('Licence saved.', 'success'); reload(); });
       handle('#accreditation', async (f, v) => { await put(`/api/admin/courses/${id}/accreditation`, { ...v, applies_to_languages: list(v.applies_to_languages) }); toast('Accreditation saved.', 'success'); reload(); });
-      handle('#cues', async (f, v) => { if (!v.vtt.trim()) throw new Error('Paste a WebVTT/SRT file first.'); if (!confirm('Replace transcript? All translations go back to review.')) return; await put(`/api/admin/courses/${id}/cues`, { vtt: v.vtt }); toast('Transcript replaced.', 'success'); reload(); });
+      handle('#cues', async (f, v) => { if (!v.vtt.trim()) throw new Error('Paste a WebVTT/SRT file first.'); if (!(await ask('Replace transcript? All translations go back to review.'))) return; await put(`/api/admin/courses/${id}/cues`, { vtt: v.vtt }); toast('Transcript replaced.', 'success'); reload(); });
       handle('#media', async (f) => {
         const file = f.file.files[0]; if (!file) throw new Error('Choose a file.');
         await api(`/api/admin/courses/${id}/media`, { method: 'POST', body: file, headers: { 'Content-Type': file.type } }); toast('Video uploaded.', 'success'); reload();
@@ -357,7 +358,7 @@ export default function adminView() {
       handle('[data-plan]', async (f, v) => { await put(`/api/admin/plans/${f.dataset.plan}`, { ...v, features: v.features.split('\n') }); toast('Plan saved.', 'success'); });
       handle('[data-partner]', async (f, v) => { await patch(`/api/admin/partners/${f.dataset.partner}`, v); toast('Saved.', 'success'); reload(); });
       handle('[data-complaint]', async (f, v) => {
-        if (v.suspendCourse && !confirm('Suspend the affected course immediately?')) return;
+        if (v.suspendCourse && !(await ask('Suspend the affected course immediately?'))) return;
         await patch(`/api/admin/complaints/${f.dataset.complaint}`, v); toast('Saved.', 'success'); reload();
       });
       handle('#new-spec', async (f, v) => { await post('/api/admin/specialties', v); toast('Specialty added.', 'success'); reload(); });

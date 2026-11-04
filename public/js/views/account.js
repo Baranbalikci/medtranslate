@@ -1,3 +1,4 @@
+import { ask, STATIC } from '../nav.js';
 import { html, icon, fmtDate, fmtMoney, fmtDuration, courseCard, emptyState, formData, setBusy, formError, toast } from '../ui.js';
 import { state, emit, langInfo } from '../store.js';
 import { get, post, patch, del } from '../api.js';
@@ -102,7 +103,7 @@ export default function accountView() {
             </div><button class="btn btn-ghost" type="submit">Change password</button></form>
           <div class="panel"><div class="panel-head"><h2>Privacy & your data</h2></div>
             <p class="small muted">Under the GDPR you have the right to access, rectify, export and delete your personal data (Art. 15–20 GDPR) and to withdraw consent at any time.</p>
-            <div class="row"><a class="btn btn-ghost" href="/api/account/export" download>${icon('download', 16)} Export my data (JSON)</a>
+            <div class="row">${STATIC ? '' : html`<a class="btn btn-ghost" href="/api/account/export" download>${icon('download', 16)} Export my data (JSON)</a>`}
               <button class="btn btn-ghost" data-action="cookie-settings">${icon('shield', 16)} Cookie settings</button></div>
             <hr class="sep">
             <form id="delete" novalidate><h3 style="color:var(--err)">Delete account</h3>
@@ -118,15 +119,16 @@ export default function accountView() {
       on('#profile', async (f) => { const r = await patch('/api/account/profile', formData(f)); state.user = r.user; emit(); toast('Profile saved.', 'success'); });
       on('#password', async (f) => { await post('/api/account/password', formData(f)); f.reset(); toast('Password changed.', 'success'); });
       on('#delete', async (f) => {
-        if (!confirm('Delete your account permanently? This cannot be undone.')) return;
+        if (!(await ask('Delete your account permanently? This cannot be undone.', { confirmLabel: 'Delete account', danger: true }))) return;
         await del('/api/account', formData(f));
         state.user = null; emit(); toast('Your account has been deleted.'); ctx.navigate('/');
       });
       root.querySelector('[data-cancel-sub]')?.addEventListener('click', async (e) => {
-        if (!confirm('Cancel your subscription at the end of the current period?')) return;
-        setBusy(e.currentTarget, true);
+        const btn = e.currentTarget;
+        if (!(await ask('Cancel your subscription at the end of the current period?', { confirmLabel: 'Cancel subscription' }))) return;
+        setBusy(btn, true);
         try { const r = await post('/api/subscription/cancel'); toast(`Cancelled. Access until ${fmtDate(r.accessUntil)}.`, 'success'); ctx.navigate('/account/subscription', { replace: true }); }
-        catch (err) { toast(err.message, 'error'); setBusy(e.currentTarget, false); }
+        catch (err) { toast(err.message, 'error'); setBusy(btn, false); }
       });
     },
   };

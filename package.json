@@ -2,7 +2,7 @@
   "name": "medtranslate",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-powered multilingual medical education (CME/CPD) platform — subtitles, AI dubbing and compliance-gated publishing.",
+  "description": "AI-powered multilingual medical education (CME/CPD) platform \u2014 subtitles, AI dubbing and compliance-gated publishing.",
   "type": "module",
   "engines": {
     "node": ">=22.13"
@@ -12,9 +12,13 @@
     "dev": "node --disable-warning=ExperimentalWarning --watch server/server.js",
     "media": "node tools/generate-media.mjs",
     "reset-db": "node --disable-warning=ExperimentalWarning tools/reset-db.mjs",
-    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
+    "build:static": "node --disable-warning=ExperimentalWarning tools/build-static.mjs"
   },
   "optionalDependencies": {
     "@anthropic-ai/sdk": "*"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
   }
 }

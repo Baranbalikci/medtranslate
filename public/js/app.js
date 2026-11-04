@@ -1,3 +1,4 @@
+import { curPath, curSearch, setUrl, STATIC } from './nav.js';
 import { html, icon, $, $$, esc, toast } from './ui.js';
 import { state, loadSession, onChange, saveConsent } from './store.js';
 import { post } from './api.js';
@@ -35,16 +36,16 @@ let cleanup = null;
 let navToken = 0;
 
 export function navigate(to, { replace = false, keepScroll = false } = {}) {
-  if (to === location.pathname + location.search && !replace) { render({ keepScroll: true }); return; }
-  history[replace ? 'replaceState' : 'pushState']({}, '', to);
+  if (to === curPath() + curSearch() && !replace) { render({ keepScroll: true }); return; }
+  setUrl(to, replace);
   render({ keepScroll });
 }
 window.addEventListener('popstate', () => render({ keepScroll: true }));
 
 async function render({ keepScroll = false } = {}) {
   const token = ++navToken;
-  const path = location.pathname;
-  const query = Object.fromEntries(new URLSearchParams(location.search));
+  const path = curPath();
+  const query = Object.fromEntries(new URLSearchParams(curSearch()));
   let match = null; let params = {};
   for (const r of routes) {
     const m = r.re.exec(path);
@@ -69,7 +70,7 @@ async function render({ keepScroll = false } = {}) {
     main.classList.remove('leaving');
     main.removeAttribute('aria-busy');
     if (!keepScroll) window.scrollTo({ top: 0, behavior: 'instant' });
-    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    if (!STATIC && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
     updateNav();
     if (view.mount) cleanup = view.mount(main, ctx) || null;
     const h1 = main.querySelector('h1');
@@ -78,7 +79,7 @@ async function render({ keepScroll = false } = {}) {
   } catch (err) {
     if (token !== navToken) return;
     console.error(err);
-    if (err.status === 401) { navigate(`/login?next=${encodeURIComponent(path + location.search)}`, { replace: true }); return; }
+    if (err.status === 401) { navigate(`/login?next=${encodeURIComponent(path + curSearch())}`, { replace: true }); return; }
     main.classList.remove('leaving');
     main.removeAttribute('aria-busy');
     main.innerHTML = String(html`<section class="section"><div class="container narrow center">
@@ -139,7 +140,7 @@ function renderHeader() {
 
 function updateNav() {
   $$('.nav-link').forEach((a) => {
-    const active = location.pathname === a.getAttribute('href') || location.pathname.startsWith(a.getAttribute('href') + '/');
+    const active = curPath() === a.getAttribute('href') || curPath().startsWith(a.getAttribute('href') + '/');
     a.classList.toggle('active', active);
     if (active) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
@@ -215,7 +216,7 @@ document.addEventListener('click', (e) => {
     if (href.startsWith('/') && !href.startsWith('//') && !href.startsWith('/api/') && !href.startsWith('/media/')) {
       e.preventDefault();
       const [p, hash] = href.split('#');
-      if (hash && p === location.pathname) { document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' }); return; }
+      if (hash && p === curPath()) { document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' }); return; }
       navigate(href);
       return;
     }
@@ -234,9 +235,31 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMobileMenu(); });
 window.addEventListener('scroll', () => $('#header').classList.toggle('scrolled', window.scrollY > 8), { passive: true });
 
+// Static demo: sandboxed frames may block native form submission. Forms are
+// handled in script anyway, so dispatch the submit event ourselves.
+if (STATIC) {
+  const fire = (form, submitter) => form.dispatchEvent(new SubmitEvent('submit', { cancelable: true, bubbles: true, submitter }));
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || !btn.form || (btn.type && btn.type !== 'submit')) return;
+    e.preventDefault(); fire(btn.form, btn);
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.form || e.target.matches('textarea, button')) return;
+    e.preventDefault(); fire(e.target.form, null);
+  }, true);
+}
+
 onChange(() => renderHeader());
 
 (async function boot() {
+  if (STATIC) {
+    document.body.classList.add('static');
+    const b = document.createElement('div');
+    b.className = 'static-banner';
+    b.textContent = 'Interactive demo running in your browser — demo data only. Accounts and purchases are stored locally; no payments, no data is sent. The admin dashboard requires the full server version.';
+    document.body.prepend(b);
+  }
   try { await loadSession(); } catch (e) { console.error(e); toast('Could not reach the server. Some features may not work.', 'error'); }
   renderHeader();
   renderFooter();
