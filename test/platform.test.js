@@ -1,0 +1,177 @@
+// Integration tests: start the real server on a temporary database and exercise
+// the compliance gates, entitlement and account flows over HTTP.
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const PORT = 3900 + Math.floor(Math.random() * 90);
+const BASE = `http://127.0.0.1:${PORT}`;
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-test-'));
+let server;
+
+before(async () => {
+  server = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/server.js'], {
+    env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', DATA_DIR: dataDir, ADMIN_PASSWORD: 'TestAdmin12345', ANTHROPIC_API_KEY: '', STRIPE_SECRET_KEY: '' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  for (let i = 0; i < 50; i++) {
+    try { if ((await fetch(`${BASE}/api/meta`)).ok) return; } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('server did not start');
+});
+after(() => { server?.kill(); fs.rmSync(dataDir, { recursive: true, force: true }); });
+
+function client() {
+  let cookie = '';
+  return async (method, p, body) => {
+    const res = await fetch(BASE + p, {
+      method,
+      headers: { 'X-Requested-With': 'medtranslate', 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const set = res.headers.getSetCookie?.() || [];
+    for (const c of set) if (c.startsWith('mt_session=')) cookie = c.split(';')[0];
+    const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
+    return { status: res.status, data };
+  };
+}
+
+test('catalogue only lists published courses and released, licensed languages', async () => {
+  const c = client();
+  const { data } = await c('GET', '/api/courses');
+  assert.ok(data.total >= 9);
+  assert.ok(!data.courses.some((x) => x.slug === 'pediatric-fever-without-source'), 'draft must not be listed');
+  const stroke = data.courses.find((x) => x.slug === 'stroke-first-60-minutes');
+  assert.equal(stroke.languages.length, 10);
+  assert.equal(stroke.accreditation.status, 'not_accredited');
+  const de = await c('GET', '/api/courses?language=tr');
+  assert.ok(de.data.courses.every((x) => x.languages.includes('tr')));
+});
+
+test('state-changing requests require the CSRF header', async () => {
+  const res = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(res.status, 403);
+});
+
+test('regional licence is enforced at playback (HTTP 451)', async () => {
+  const c = client();
+  const r = await c('GET', '/api/courses/rapid-sequence-induction-checklist/play');
+  assert.equal(r.status, 451);
+});
+
+test('paid course: anonymous users get preview-only transcript', async () => {
+  const c = client();
+  const r = await c('GET', '/api/courses/sepsis-hour-one/cues?lang=de');
+  assert.equal(r.status, 200);
+  assert.equal(r.data.truncated, true);
+  assert.ok(r.data.cues.length < 6);
+  const unknown = await c('GET', '/api/courses/sepsis-hour-one/cues?lang=it');
+  assert.equal(unknown.status, 404, 'unreleased language must not be served');
+});
+
+test('register → demo checkout → full access → GDPR export → delete', async () => {
+  const c = client();
+  const reg = await c('POST', '/api/auth/register', { firstName: 'Ada', lastName: 'Test', email: 'ada@example.org', password: 'Password12345', country: 'DE', preferredLanguage: 'de', acceptTerms: true, confirmProfessional: true });
+  assert.equal(reg.status, 200);
+  const noWaiver = await c('POST', '/api/checkout', { plan: 'monthly', currency: 'EUR', acceptTerms: true });
+  assert.equal(noWaiver.status, 400, 'withdrawal waiver (§ 356 (5) BGB) is required');
+  const ok = await c('POST', '/api/checkout', { plan: 'monthly', currency: 'EUR', acceptTerms: true, waiveWithdrawal: true });
+  assert.equal(ok.data.mode, 'demo');
+  const play = await c('GET', '/api/courses/sepsis-hour-one/play');
+  assert.equal(play.data.entitlement.full, true);
+  assert.equal(play.data.previewSec, null);
+  const dash = await c('GET', '/api/account/dashboard');
+  assert.equal(dash.data.invoices.length, 1);
+  assert.equal(dash.data.invoices[0].tax_rate, 19);
+  assert.ok(dash.data.invoices[0].number.startsWith('DEMO-'));
+  const exp = await c('GET', '/api/account/export');
+  assert.equal(exp.data.profile.email, 'ada@example.org');
+  const delBad = await c('DELETE', '/api/account', { password: 'wrong' });
+  assert.equal(delBad.status, 400);
+  const delOk = await c('DELETE', '/api/account', { password: 'Password12345' });
+  assert.equal(delOk.status, 200);
+  const me = await c('GET', '/api/auth/me');
+  assert.equal(me.data.user, null);
+});
+
+test('anonymous cancellation request does not cancel third-party contracts', async () => {
+  const owner = client();
+  await owner('POST', '/api/auth/register', { firstName: 'Bo', lastName: 'Owner', email: 'bo@example.org', password: 'Password12345', country: 'AT', acceptTerms: true, confirmProfessional: true });
+  const co = await owner('POST', '/api/checkout', { plan: 'monthly', currency: 'EUR', acceptTerms: true, waiveWithdrawal: true });
+  assert.equal(co.status, 200, JSON.stringify(co.data));
+  const stranger = client();
+  const r = await stranger('POST', '/api/contracts/cancel', { name: 'Someone', email: 'bo@example.org', kind: 'ordinary' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.processedAutomatically, false);
+  const dash = await owner('GET', '/api/account/dashboard');
+  assert.equal(dash.data.subscription.status, 'active');
+  const self = await owner('POST', '/api/contracts/cancel', { name: 'Bo Owner', email: 'bo@example.org', kind: 'ordinary' });
+  assert.equal(self.data.processedAutomatically, true);
+});
+
+test('admin: publication gate, QC-gated release and automatic suspension', async () => {
+  const a = client();
+  assert.equal((await a('POST', '/api/auth/login', { email: 'admin@medtranslate.local', password: 'TestAdmin12345' })).status, 200);
+  const courses = (await a('GET', '/api/admin/courses')).data;
+  const ped = courses.find((x) => x.slug === 'pediatric-fever-without-source');
+  const blocked = await a('POST', `/api/admin/courses/${ped.id}/status`, { status: 'published' });
+  assert.equal(blocked.status, 409);
+  assert.ok(blocked.data.details.blockers.some((b) => b.includes('commercial')));
+
+  const course = (await a('GET', `/api/admin/courses/${ped.id}`)).data;
+  const lic = { ...course.license, right_commercial: true };
+  await a('PUT', `/api/admin/courses/${ped.id}/license`, lic);
+  assert.equal((await a('POST', `/api/admin/courses/${ped.id}/status`, { status: 'published' })).status, 200);
+
+  // AI provider not configured → 503, never a fake translation
+  assert.equal((await a('POST', `/api/admin/courses/${ped.id}/translations`, { language: 'de', mode: 'ai' })).status, 503);
+  const vtt = course.cues.map((q, i) => `${i + 1}\n00:00:${String(Math.floor(q.start_sec)).padStart(2, '0')}.000 --> 00:00:${String(Math.floor(q.end_sec)).padStart(2, '0')}.000\nDE ${i}`).join('\n\n');
+  const tr = await a('POST', `/api/admin/courses/${ped.id}/translations`, { language: 'de', mode: 'import', vtt: `WEBVTT\n\n${vtt}\n` });
+  const tid = tr.data.translation.id;
+  assert.equal((await a('POST', `/api/admin/translations/${tid}/release`, {})).status, 409, 'release requires QC approval');
+  assert.equal((await a('POST', `/api/admin/translations/${tid}/review`, { decision: 'approved', qualification: 'Paediatrician' })).status, 400);
+  await a('POST', `/api/admin/translations/${tid}/review`, { decision: 'approved', qualification: 'Paediatrician', terminology_ok: true, meaning_preserved: true, sync_ok: true });
+  assert.equal((await a('POST', `/api/admin/translations/${tid}/release`, {})).status, 200);
+  const pub = await client()('GET', '/api/courses/pediatric-fever-without-source');
+  assert.deepEqual(pub.data.languages.sort(), ['de', 'en']);
+
+  // Editing a released translation hides it again until re-reviewed.
+  await a('PUT', `/api/admin/translations/${tid}/cues`, { texts: course.cues.map((_, i) => `DE edited ${i}`) });
+  const pub2 = await client()('GET', '/api/courses/pediatric-fever-without-source');
+  assert.deepEqual(pub2.data.languages, ['en']);
+
+  // Removing a required right suspends the published course automatically.
+  await a('PUT', `/api/admin/courses/${ped.id}/license`, { ...lic, right_use: false });
+  assert.equal((await a('GET', `/api/admin/courses/${ped.id}`)).data.status, 'suspended');
+  assert.equal((await client()('GET', '/api/courses/pediatric-fever-without-source')).status, 404);
+});
+
+test('accredited status requires evidence before it can be published', async () => {
+  const a = client();
+  await a('POST', '/api/auth/login', { email: 'admin@medtranslate.local', password: 'TestAdmin12345' });
+  const ecg = (await a('GET', '/api/admin/courses')).data.find((x) => x.slug === 'acs-early-ecg-recognition');
+  await a('PUT', `/api/admin/courses/${ecg.id}/accreditation`, { status: 'accredited', credit_amount: 2 });
+  const d = (await a('GET', `/api/admin/courses/${ecg.id}`)).data;
+  assert.ok(d.accreditationBlockers.length >= 3);
+  assert.equal(d.status, 'suspended');
+  await a('PUT', `/api/admin/courses/${ecg.id}/accreditation`, { status: 'not_accredited' });
+});
+
+test('non-staff users cannot reach admin endpoints', async () => {
+  const c = client();
+  assert.equal((await c('GET', '/api/admin/overview')).status, 401);
+  await c('POST', '/api/auth/register', { firstName: 'Cy', lastName: 'User', email: 'cy@example.org', password: 'Password12345', country: 'FR', acceptTerms: true, confirmProfessional: true });
+  assert.equal((await c('GET', '/api/admin/overview')).status, 403);
+});
+
+test('media requires a valid signature', async () => {
+  assert.equal((await fetch(`${BASE}/media/videos/sepsis-hour-one.mp4`)).status, 403);
+  const { data } = await client()('GET', '/api/courses/stroke-first-60-minutes/play');
+  const res = await fetch(BASE + data.mediaUrl, { headers: { Range: 'bytes=0-99' } });
+  assert.equal(res.status, 206);
+  assert.equal((await res.arrayBuffer()).byteLength, 100);
+});
