@@ -45,6 +45,9 @@ export const config = {
   stripeSecretKey: env.STRIPE_SECRET_KEY || null,
   stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET || null,
 
+  // Transactional e-mail (Resend HTTP API). Without a key, e-mails are only written to the admin outbox.
+  mail: { resendApiKey: env.RESEND_API_KEY || null, from: env.MAIL_FROM || 'MedTranslate <reminders@example.invalid>' },
+
   // Server-side neural TTS for dubbed audio tracks. Not connected by default.
   ttsProvider: env.TTS_PROVIDER || null,
 

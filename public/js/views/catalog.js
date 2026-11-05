@@ -4,17 +4,17 @@ import { get } from '../api.js';
 import { setUrl } from '../nav.js';
 import { specIcon } from './home.js';
 
-const FILTERS = ['q', 'specialty', 'language', 'provider', 'duration', 'accreditation', 'level', 'since', 'access', 'sort'];
+const FILTERS = ['q', 'topic', 'specialty', 'language', 'provider', 'duration', 'accreditation', 'level', 'since', 'access', 'sort'];
 const sinceOpts = [[30, 'Last 30 days'], [90, 'Last 3 months'], [365, 'Last 12 months']];
 
 export default {
-  title: (ctx) => (ctx.params.slug ? state.meta.specialties.find((s) => s.slug === ctx.params.slug)?.name || 'Courses' : 'Courses'),
+  title: (ctx) => (ctx.params.slug ? (state.meta.focus ? state.meta.topics : state.meta.specialties).find((s) => s.slug === ctx.params.slug)?.name || 'Courses' : 'Courses'),
   description: 'Browse multilingual CME/CPD courses by specialty, language, provider, duration and accreditation.',
   render(ctx) {
     const m = state.meta;
-    const f = { ...ctx.query, ...(ctx.params.slug ? { specialty: ctx.params.slug } : {}) };
+    const f = { ...ctx.query, ...(ctx.params.slug ? { [m.focus ? 'topic' : 'specialty']: ctx.params.slug } : {}) };
     const focus = m.focus;
-    const spec = m.specialties.find((s) => s.slug === f.specialty && s.slug !== focus?.slug);
+    const spec = focus ? (m.topics || []).find((s) => s.slug === f.topic) : m.specialties.find((s) => s.slug === f.specialty);
     const total = m.stats.courses;
     const headline = (s) => (s ? s.name : focus ? 'Emergency medicine courses' : 'Course catalogue');
     const lead = (s) => (s ? s.description : focus ? 'Time-critical education with AI subtitles and AI voice, in the language your team speaks. Browse by topic, language and level.' : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.');
@@ -25,7 +25,7 @@ export default {
       <section class="cat-hero">
         <div class="cat-aurora" aria-hidden="true"></div>
         <div class="container">
-          <div class="crumbs"><a href="/">Home</a><span>/</span><a href="${focus ? '/courses' : '/specialties'}">${focus ? 'Emergency medicine' : 'Specialties'}</a>${spec ? html`<span>/</span><span>${spec.name}</span>` : ''}</div>
+          <div class="crumbs"><a href="/">Home</a><span>/</span><a href="${focus ? '/topics' : '/specialties'}">${focus ? 'Topics' : 'Specialties'}</a>${spec ? html`<span>/</span><span>${spec.name}</span>` : ''}</div>
           <div class="cat-title">
             <div>
               <h1 id="cat-h1">${headline(spec)}</h1>
@@ -35,13 +35,13 @@ export default {
           </div>
           <div class="spec-rail" role="tablist" aria-label="${focus ? 'Emergency topic' : 'Medical specialty'}">
             <button type="button" role="tab" class="sr-chip ${!spec ? 'on' : ''}" data-spec="" aria-selected="${!spec}">${icon('layers', 16)}<b>All</b><i>${total}</i></button>
-            ${m.specialties.filter((s) => s.course_count && s.slug !== focus?.slug).map((s) => html`<button type="button" role="tab" class="sr-chip ${spec?.slug === s.slug ? 'on' : ''}" data-spec="${s.slug}" aria-selected="${spec?.slug === s.slug}">${specIcon(s.icon)}<b>${s.name}</b><i>${s.course_count}</i></button>`)}
+            ${(focus ? (m.topics || []) : m.specialties).filter((s) => s.course_count).map((s) => html`<button type="button" role="tab" class="sr-chip ${spec?.slug === s.slug ? 'on' : ''}" style="--ac:${s.accent || '#22D3EE'}" data-spec="${s.slug}" aria-selected="${spec?.slug === s.slug}">${specIcon(s.icon)}<b>${s.name}</b><i>${s.course_count}</i></button>`)}
           </div>
         </div>
       </section>
       <div class="container">
         <form id="filters" class="cat-bar" role="search" aria-label="Course filters">
-          <input type="hidden" name="specialty" value="${f.specialty || ''}">
+          <input type="hidden" name="${focus ? 'topic' : 'specialty'}" value="${(focus ? f.topic : f.specialty) || ''}">
           ${pill('language', 'Language', 'globe', [['', 'Any'], ...m.languages.filter((l) => l.live).map((l) => [l.code, l.native])], f.language)}
           ${pill('duration', 'Length', 'clock', [['', 'Any'], ['short', 'Under 15 min'], ['medium', '15–45 min'], ['long', 'Over 45 min']], f.duration)}
           ${pill('level', 'Level', 'layers', [['', 'Any'], ['foundation', 'Foundation'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']], f.level)}
@@ -96,7 +96,7 @@ export default {
     };
 
     function paintHero(slug) {
-      const s = m.specialties.find((x) => x.slug === slug && x.slug !== m.focus?.slug);
+      const s = (m.focus ? (m.topics || []) : m.specialties).find((x) => x.slug === slug);
       $('#cat-h1', root).textContent = s ? s.name : m.focus ? 'Emergency medicine courses' : 'Course catalogue';
       $('#cat-lead', root).textContent = s ? s.description : m.focus ? 'Time-critical education with AI subtitles and AI voice, in the language your team speaks. Browse by topic, language and level.' : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.';
       $$('.sr-chip', root).forEach((c) => { const on = (c.dataset.spec || '') === (slug || ''); c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
@@ -105,8 +105,9 @@ export default {
 
     async function load() {
       const v = values();
-      const base = v.specialty && v.specialty !== m.focus?.slug ? `/specialties/${v.specialty}` : '/courses';
-      const urlQ = new URLSearchParams(v); urlQ.delete('specialty');
+      const key = m.focus ? 'topic' : 'specialty';
+      const base = v[key] ? `/${m.focus ? 'topics' : 'specialties'}/${v[key]}` : '/courses';
+      const urlQ = new URLSearchParams(v); urlQ.delete(key);
       setUrl(base + (urlQ.toString() ? `?${urlQ}` : ''), true);
       const my = ++token;
       results.style.opacity = '.55';
@@ -117,7 +118,7 @@ export default {
         results.innerHTML = String(courses.length
           ? (view === 'list' ? html`<div class="course-rows">${courses.map((c) => courseRow(c, m.languages))}</div>` : html`<div class="course-grid">${courses.map((c) => courseCard(c, m.languages))}</div>`)
           : emptyState('No courses match these filters', 'Try removing a filter or searching for a broader term. New languages and specialties are added regularly.', html`<button class="btn btn-ghost" data-reset>Reset filters</button>`));
-        const active = Object.entries(v).filter(([k]) => !['sort', 'specialty'].includes(k));
+        const active = Object.entries(v).filter(([k]) => !['sort', 'specialty', 'topic'].includes(k));
         $('#active', root).innerHTML = String(html`${active.map(([k, x]) => html`<button class="chip-x" data-clear="${k}" aria-label="Remove filter">${labels[k]?.(x) || x} ${icon('close', 14)}</button>`)}`);
         $('[data-reset]', form).hidden = !active.length;
         $$('.fpill', form).forEach((p) => { const el = p.querySelector('select,input'); p.classList.toggle('set', el.type === 'checkbox' ? el.checked : !!el.value); });
@@ -136,7 +137,7 @@ export default {
 
     root.addEventListener('click', (e) => {
       const sp = e.target.closest('[data-spec]');
-      if (sp) { form.elements.specialty.value = sp.dataset.spec; paintHero(sp.dataset.spec); load(); sp.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
+      if (sp) { form.elements[m.focus ? 'topic' : 'specialty'].value = sp.dataset.spec; paintHero(sp.dataset.spec); load(); sp.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
       const vw = e.target.closest('[data-view]');
       if (vw) { setView(vw.dataset.view); load(); return; }
       if (e.target.closest('[data-reset]')) {

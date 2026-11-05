@@ -22,7 +22,7 @@ export default {
   async render() {
     const m = state.meta;
     const focus = m.focus;
-    const topics = m.specialties.filter((s) => s.course_count && s.slug !== focus?.slug);
+    const topics = (m.topics || []).filter((t) => t.course_count);
     const live = m.languages.filter((l) => l.live);
     const africa = m.languages.filter((l) => l.region === 'africa');
     const row = (list) => html`${[...list, ...list].map((l) => html`<span class="lang-pill ${l.live ? 'live' : ''}" aria-hidden="true">${l.live ? html`<span class="live-dot"></span>` : html`<span class="soon-dot"></span>`}${l.native} <small>${l.name}</small></span>`)}`;
@@ -192,10 +192,10 @@ export default {
       <div class="container">
         <div class="row between" style="margin-bottom:32px;align-items:flex-end">
           <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Learn by emergency topic' : 'Learn across the full breadth of medicine'}</h2></div>
-          <a href="/specialties" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
+          <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
         </div>
         <div class="spec-grid" data-stagger>
-          ${(focus ? topics : m.specialties).map((s) => html`<a class="spec" href="/specialties/${s.slug}"><span class="ic">${specIcon(s.icon)}</span><span><b>${s.name}</b><small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small></span></a>`)}
+          ${(focus ? topics : m.specialties).map((s) => html`<a class="spec" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}"><span class="ic">${specIcon(s.icon)}</span><span><b>${s.name}</b><small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small></span></a>`)}
         </div>
       </div>
     </section>

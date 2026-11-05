@@ -13,6 +13,8 @@ const routes = [
   ['/courses/:slug', () => import('./views/course.js')],
   ['/specialties', () => import('./views/specialties.js')],
   ['/specialties/:slug', () => import('./views/catalog.js')],
+  ['/topics', () => import('./views/specialties.js')],
+  ['/topics/:slug', () => import('./views/catalog.js')],
   ['/technology', () => import('./views/technology.js')],
   ['/pricing', () => import('./views/pricing.js')],
   ['/checkout', () => import('./views/checkout.js')],
@@ -95,8 +97,8 @@ async function render({ keepScroll = false } = {}) {
 
 
 // ── header / footer ─────────────────────────────────────────────────────────
-const NAV = [
-  ['/courses', 'Courses'], ['/planner', 'Planner'], ['/specialties', 'Topics'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
+const navItems = () => [
+  ['/courses', 'Courses'], ['/planner', 'Planner'], [state.meta?.focus ? '/topics' : '/specialties', 'Topics'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
 ];
 
 function logo() {
@@ -112,7 +114,7 @@ function renderHeader() {
     <div class="container header-inner">
       ${logo()}
       <nav class="nav-desktop" aria-label="Main">
-        ${NAV.map(([href, label]) => html`<a href="${href}" class="nav-link">${label}</a>`)}
+        ${navItems().map(([href, label]) => html`<a href="${href}" class="nav-link">${label}</a>`)}
       </nav>
       <div class="header-actions">
         <button type="button" class="lang-switch" data-action="site-lang" aria-label="Website language">${icon('globe', 17)}<span class="code">${state.meta?.languages.find((l) => l.code === (storedSiteLanguage() || 'en'))?.native || 'English'}</span></button>
@@ -126,7 +128,7 @@ function renderHeader() {
     `);
   $('#mobile-host').innerHTML = String(html`    <div class="mobile-menu" id="mobile-menu" hidden>
       <nav aria-label="Mobile">
-        ${NAV.map(([href, label]) => html`<a href="${href}" class="m-link">${label}${icon('arrow', 18)}</a>`)}
+        ${navItems().map(([href, label]) => html`<a href="${href}" class="m-link">${label}${icon('arrow', 18)}</a>`)}
         <a href="/about" class="m-link">About Us${icon('arrow', 18)}</a>
         <a href="/faq" class="m-link">FAQ${icon('arrow', 18)}</a>
         <button type="button" class="m-link" data-action="site-lang">Website language${icon('globe', 18)}</button>
@@ -163,7 +165,7 @@ function renderFooter() {
           <p>${state.meta?.focus ? 'Licensed emergency medicine education, made accessible across languages through AI-generated subtitles and audio — with transparent labelling and medical quality control.' : 'Licensed medical education, made accessible across languages through AI-generated subtitles and audio — with transparent labelling and medical quality control.'}</p>
           <p class="footer-note">${icon('info', 14)} Demo build: all courses, providers and translations are sample data.</p>
         </div>
-        <div><h4>Platform</h4><a href="/courses">Courses</a><a href="/specialties">Emergency Topics</a><a href="/technology">Technology</a><a href="/pricing">Pricing</a><a href="/faq">FAQ</a></div>
+        <div><h4>Platform</h4><a href="/courses">Courses</a><a href="${state.meta?.focus ? '/topics' : '/specialties'}">Emergency Topics</a><a href="/technology">Technology</a><a href="/pricing">Pricing</a><a href="/faq">FAQ</a></div>
         <div><h4>Company</h4><a href="/about">About Us</a><a href="/partners">Partner With Us</a><a href="/contact">Contact</a><a href="/legal/cme-akkreditierung">CME/CPD Accreditation</a><a href="/legal/ki-transparenz">AI Transparency</a></div>
         <div><h4>Legal</h4><a href="/legal/impressum">Impressum</a><a href="/legal/datenschutz">Datenschutz</a><a href="/legal/agb">AGB</a><a href="/legal/widerruf">Widerrufsbelehrung</a><a href="/legal/cookies">Cookie-Richtlinie</a><a href="/legal/urheberrecht">Urheberrechtliche Hinweise</a><a href="/legal/haftungsausschluss">Medizinischer Haftungsausschluss</a><a href="/legal/meldung">Rechtliche Meldungen</a></div>
       </div>

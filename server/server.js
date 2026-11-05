@@ -13,11 +13,15 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerPlanRoutes } from './routes/plan.js';
 import { verifyMediaSignature, resolveMedia, streamFile } from './services/media.js';
 import { all } from './db.js';
-import { loadPublishedCourses } from './catalog.js';
+import { processReminders } from './services/reminders.js';
+import { loadPublishedCourses, launchFocus } from './catalog.js';
 
 seedIfEmpty();
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 3600_000).unref();
+// Planner e-mail reminders: checked every minute (never overlapping runs).
+let reminding = false;
+setInterval(async () => { if (reminding) return; reminding = true; try { await processReminders(); } catch (e) { console.error('reminders:', e.message); } finally { reminding = false; } }, 60_000).unref();
 
 const router = new Router();
 registerPublicRoutes(router);
@@ -72,11 +76,11 @@ function serveStatic(req, res, pathname) {
 
 function sitemap() {
   const base = config.publicUrl.replace(/\/$/, '');
-  const pages = ['/', '/courses', '/specialties', '/technology', '/pricing', '/partners', '/about', '/faq', '/contact',
+  const pages = ['/', '/courses', launchFocus() ? '/topics' : '/specialties', '/technology', '/pricing', '/partners', '/about', '/faq', '/contact',
     '/legal/impressum', '/legal/datenschutz', '/legal/agb', '/legal/ki-transparenz', '/legal/cme-akkreditierung'];
   const courses = loadPublishedCourses().map((c) => ({ slug: c.slug, updated_at: c.updated_at }));
-  const specialties = [...new Set(loadPublishedCourses().flatMap((c) => [c.specialty_slug, c.specialty2_slug]).filter(Boolean))].map((slug) => ({ slug }));
-  const urls = [...pages.map((p) => ({ loc: base + p })), ...specialties.map((s) => ({ loc: `${base}/specialties/${s.slug}` })),
+  const specialties = launchFocus() ? [...new Set(loadPublishedCourses().map((c) => c.topic_slug).filter(Boolean))].map((slug) => ({ slug })) : [...new Set(loadPublishedCourses().flatMap((c) => [c.specialty_slug, c.specialty2_slug]).filter(Boolean))].map((slug) => ({ slug }));
+  const urls = [...pages.map((p) => ({ loc: base + p })), ...specialties.map((s) => ({ loc: `${base}/${launchFocus() ? 'topics' : 'specialties'}/${s.slug}` })),
     ...courses.map((c) => ({ loc: `${base}/courses/${c.slug}`, lastmod: c.updated_at.slice(0, 10) }))];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
     .map((u) => `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>\n`;

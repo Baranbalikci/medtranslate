@@ -7,6 +7,7 @@ import { signMediaPath } from '../services/media.js';
 import { translationStatus, translateCues, translateStrings, ProviderNotConnectedError } from '../services/translation.js';
 import crypto from 'node:crypto';
 import { paymentMode } from '../services/payments.js';
+import { mailConnected } from '../services/mail.js';
 import { HttpError, notFound, bad, str, email, oneOf, rateLimit } from '../http.js';
 
 const LEVELS = ['foundation', 'intermediate', 'advanced'];
@@ -22,9 +23,11 @@ export function registerPublicRoutes(r) {
     const visible = loadPublishedCourses();
     const focus = launchFocus();
     const count = (slug) => visible.filter((c) => c.specialty_slug === slug || c.specialty2_slug === slug).length;
-    const specialties = all('SELECT slug, name, description, icon FROM specialties ORDER BY name')
-      .map((x) => ({ ...x, course_count: count(x.slug) }))
-      .filter((x) => !focus || x.course_count > 0);
+    // Other specialties are completely hidden while a launch focus is active; the public only sees topics.
+    const specialties = focus ? [] : all('SELECT slug, name, description, icon FROM specialties ORDER BY name').map((x) => ({ ...x, course_count: count(x.slug) }));
+    const topics = all('SELECT t.slug, t.name, t.description, t.icon, t.accent, s.slug AS specialty FROM topics t LEFT JOIN specialties s ON s.id = t.specialty_id ORDER BY t.sort, t.name')
+      .map((t) => ({ ...t, course_count: visible.filter((c) => c.topic_slug === t.slug).length }))
+      .filter((t) => t.course_count > 0 && (!focus || t.specialty === focus));
     const focusInfo = focus ? (all('SELECT slug, name, description FROM specialties WHERE slug = ?', focus)[0] || null) : null;
     const usedProviders = new Set(visible.map((c) => c.provider_slug));
     const providers = all('SELECT p.slug, p.name, p.is_demo FROM providers p ORDER BY p.name').filter((x) => usedProviders.has(x.slug));
@@ -39,17 +42,18 @@ export function registerPublicRoutes(r) {
       regions: REGIONS.map(([code, name]) => ({ code, name })),
       countries: COUNTRIES.map(([code, name]) => ({ code, name, languages: COUNTRY_LANGS[code] || [] })).sort((a, b) => a.name.localeCompare(b.name)),
       professions: PROFESSIONS,
-      specialties, providers, plans, focus: focusInfo,
+      specialties, topics, providers, plans, focus: focusInfo,
       integrations: {
         aiTranslation: ai,
         payments: { mode: paymentMode() },
+        mail: { connected: mailConnected() },
         tts: config.ttsProvider ? { connected: true, provider: config.ttsProvider } : { connected: false, fallback: 'browser_speech_synthesis' },
       },
       policyVersion: config.policyVersion,
       stats: {
         courses: visible.length,
         languages: live.size,
-        specialties: specialties.filter((x) => x.course_count > 0 && x.slug !== focus).length,
+        specialties: focus ? topics.length : specialties.filter((x) => x.course_count > 0).length,
       },
     };
   });
@@ -57,6 +61,7 @@ export function registerPublicRoutes(r) {
   r.get('/api/courses', (ctx) => {
     const q = ctx.query;
     let list = loadPublishedCourses().map((c) => courseCard(c, ctx.user));
+    if (q.topic) list = list.filter((c) => c.topic?.slug === q.topic);
     if (q.specialty) list = list.filter((c) => c.specialty?.slug === q.specialty || c.secondarySpecialty?.slug === q.specialty);
     if (q.language) list = list.filter((c) => c.languages.includes(q.language));
     if (q.provider) list = list.filter((c) => c.provider.slug === q.provider);

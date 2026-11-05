@@ -3,8 +3,9 @@ import { config } from './config.js';
 import { licenseFor, accreditationFor, availableTracks, territoryAllows, publicAccreditation, entitlement } from './compliance.js';
 
 const COURSE_SELECT = `SELECT c.*, s.slug AS specialty_slug, s.name AS specialty_name, s2.slug AS specialty2_slug, s2.name AS specialty2_name,
-  p.slug AS provider_slug, p.name AS provider_name, p.is_demo AS provider_is_demo
-  FROM courses c LEFT JOIN specialties s ON s.id = c.specialty_id LEFT JOIN specialties s2 ON s2.id = c.secondary_specialty_id
+  p.slug AS provider_slug, p.name AS provider_name, p.is_demo AS provider_is_demo,
+  t.slug AS topic_slug, t.name AS topic_name, t.accent AS topic_accent, t.icon AS topic_icon
+  FROM courses c LEFT JOIN topics t ON t.id = c.topic_id LEFT JOIN specialties s ON s.id = c.specialty_id LEFT JOIN specialties s2 ON s2.id = c.secondary_specialty_id
   LEFT JOIN providers p ON p.id = c.provider_id`;
 
 export const loadCourseBySlug = (slug) => get(`${COURSE_SELECT} WHERE c.slug = ?`, slug);
@@ -26,6 +27,7 @@ export function courseCard(c, user) {
   return {
     id: c.id, slug: c.slug, title: c.title, description: c.description,
     specialty: c.specialty_slug ? { slug: c.specialty_slug, name: c.specialty_name } : null,
+    topic: c.topic_slug ? { slug: c.topic_slug, name: c.topic_name, accent: c.topic_accent, icon: c.topic_icon } : null,
     secondarySpecialty: c.specialty2_slug ? { slug: c.specialty2_slug, name: c.specialty2_name } : null,
     provider: { slug: c.provider_slug, name: c.provider_name, isDemo: !!c.provider_is_demo },
     level: c.level, durationSec: c.duration_sec, originalLanguage: c.original_language,

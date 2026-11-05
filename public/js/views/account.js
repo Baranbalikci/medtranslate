@@ -11,7 +11,7 @@ const TABS = [
 const progressRow = (p) => html`<div class="list-item">
   <a href="/courses/${p.course.slug}"><img src="${p.course.poster}" alt="" loading="lazy"></a>
   <div><h4><a href="/courses/${p.course.slug}" style="color:inherit">${p.course.title}</a></h4>
-    <div class="small muted">${p.course.specialty?.name} · ${p.lastLanguage ? `last watched in ${langInfo(p.lastLanguage)?.name}` : ''} · ${fmtDate(p.updatedAt)}</div>
+    <div class="small muted">${p.course.topic?.name || p.course.specialty?.name} · ${p.lastLanguage ? `last watched in ${langInfo(p.lastLanguage)?.name}` : ''} · ${fmtDate(p.updatedAt)}</div>
     <div class="progress" style="margin-top:10px;max-width:360px"><i style="width:${Math.round(p.percent * 100)}%"></i></div></div>
   <div class="row">${p.completedAt ? html`<span class="badge badge-ok">${icon('check', 13)} Completed</span>` : html`<span class="small muted">${Math.round(p.percent * 100)}%</span>`}
     ${p.available ? html`<a class="btn btn-ghost btn-sm" href="/courses/${p.course.slug}">${p.completedAt ? 'Rewatch' : 'Continue'}</a>` : html`<span class="badge badge-neutral">No longer available</span>`}</div>
@@ -94,7 +94,7 @@ export default function accountView() {
               <label class="field"><span>Country <small>(licensing & VAT)</small></span><select name="country"><option value="">—</option>${m.countries.map((c) => html`<option value="${c.code}" ${u.country === c.code ? 'selected' : ''}>${c.name}</option>`)}</select></label>
               <label class="field"><span>Preferred language</span><select name="preferredLanguage">${m.languages.map((l) => html`<option value="${l.code}" ${u.preferredLanguage === l.code ? 'selected' : ''}>${l.native}</option>`)}</select></label>
               <label class="field"><span>Profession</span><select name="profession"><option value="">—</option>${m.professions.map((p) => html`<option ${u.profession === p ? 'selected' : ''}>${p}</option>`)}</select></label>
-              <label class="field"><span>Specialty</span><select name="specialty"><option value="">—</option>${m.specialties.map((s) => html`<option ${u.specialty === s.name ? 'selected' : ''}>${s.name}</option>`)}</select></label>
+              ${m.focus ? '' : html`<label class="field"><span>Specialty</span><select name="specialty"><option value="">—</option>${m.specialties.map((s) => html`<option ${u.specialty === s.name ? 'selected' : ''}>${s.name}</option>`)}</select></label>`}
             </div><button class="btn btn-primary" type="submit">Save profile</button></form>
           <form class="panel" id="password" novalidate><div class="panel-head"><h2>Password</h2></div>
             <div class="form-grid">

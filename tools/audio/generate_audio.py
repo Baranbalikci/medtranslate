@@ -150,6 +150,7 @@ def main():
     ap.add_argument("--voices", default=os.path.join(os.path.dirname(__file__), "voices"))
     ap.add_argument("--only", nargs="*", help="limit to these course slugs")
     ap.add_argument("--langs", nargs="*", help="limit dubbed languages (and skip the original track)")
+    ap.add_argument("--original-only", action="store_true", help="only re-mux the original narration into the videos (keeps dubbed tracks)")
     args = ap.parse_args()
 
     db = sqlite3.connect(args.db)
@@ -165,7 +166,7 @@ def main():
         cues = [dict(r) | {"start": r["start_sec"], "end": r["end_sec"]} for r in
                 db.execute("SELECT idx, start_sec, end_sec, speaker, text FROM cues WHERE course_id = ? ORDER BY idx", (c["id"],))]
         entry = manifest.setdefault(c["slug"], {"original": False, "languages": []})
-        if args.langs:  # incremental run: keep what an earlier run produced
+        if args.langs or args.original_only:  # incremental run: keep what an earlier run produced
             prev = previous.get(c["slug"], {})
             entry.update(original=prev.get("original", False), languages=list(prev.get("languages", [])))
         total = c["duration_sec"]
@@ -175,7 +176,7 @@ def main():
         if pcm:
             mux_original(os.path.join(ROOT, "media", c["media_file"]), pcm)
             entry["original"] = True
-        langs = db.execute("SELECT id, language FROM translations WHERE course_id = ? AND status = 'released'", (c["id"],)).fetchall()
+        langs = [] if args.original_only else db.execute("SELECT id, language FROM translations WHERE course_id = ? AND status = 'released'", (c["id"],)).fetchall()
         for t in langs:
             if args.langs and t["language"] not in args.langs:
                 continue

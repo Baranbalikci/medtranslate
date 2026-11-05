@@ -7,7 +7,7 @@ const TABS = [
   ['', 'Overview', 'chart', ['admin', 'reviewer']], ['courses', 'Courses', 'play', ['admin', 'reviewer']], ['reviews', 'Translation QC', 'sparkles', ['admin', 'reviewer']],
   ['glossary', 'Glossary', 'file', ['admin', 'reviewer']], ['users', 'Users', 'users', ['admin']], ['subscriptions', 'Subscriptions', 'layers', ['admin']],
   ['plans', 'Prices & plans', 'chart', ['admin']], ['partners', 'Partners', 'handshake', ['admin']], ['complaints', 'Complaints', 'alert', ['admin']],
-  ['taxonomy', 'Specialties & providers', 'stethoscope', ['admin']], ['audit', 'Audit log', 'shield', ['admin']],
+  ['taxonomy', 'Specialties & providers', 'stethoscope', ['admin']], ['outbox', 'E-mail outbox', 'file', ['admin']], ['audit', 'Audit log', 'shield', ['admin']],
 ];
 const st = (s) => html`<span class="status st-${s}">${String(s).replace(/_/g, ' ')}</span>`;
 const RIGHTS = [['right_use', 'Use of original video'], ['right_translate', 'AI-assisted translation'], ['right_subtitle', 'Subtitles'], ['right_ai_audio', 'AI audio tracks'],
@@ -29,7 +29,7 @@ export default function adminView() {
         reviews: () => (id ? get(`/api/admin/translations/${id}`) : get('/api/admin/review-queue')), glossary: () => get('/api/admin/glossary'),
         users: () => get(`/api/admin/users?q=${encodeURIComponent(ctx.query.q || '')}`), subscriptions: () => get('/api/admin/subscriptions'),
         plans: () => get('/api/admin/plans'), partners: () => get('/api/admin/partners'), complaints: () => get('/api/admin/complaints'),
-        taxonomy: () => get('/api/admin/taxonomy'), audit: () => get('/api/admin/audit'),
+        taxonomy: () => get('/api/admin/taxonomy'), outbox: () => get('/api/admin/outbox'), audit: () => get('/api/admin/audit'),
       };
       if (!loaders[tab]) { const e = new Error('Unknown admin section.'); e.status = 404; throw e; }
       data = await loaders[tab]();
@@ -167,6 +167,10 @@ export default function adminView() {
             <form id="new-prov" class="row" style="margin-bottom:16px"><input name="name" class="input-sm" placeholder="Provider name" required style="flex:1"><input name="country" class="input-sm" placeholder="CC" maxlength="2" style="width:60px"><button class="btn btn-primary btn-sm">Add</button></form>
             <ul class="small">${d.providers.map((p) => html`<li>${p.name}${p.is_demo ? ' (demo)' : ''}</li>`)}</ul></div></div>`;
 
+        case 'outbox': return html`<div class="panel"><div class="panel-head"><h2>E-mail outbox</h2><span class="small muted">${state.meta.integrations.mail?.connected ? 'Mail provider connected' : 'No mail provider connected — messages are stored, not delivered'}</span></div>
+          <div class="table-wrap"><table class="table"><thead><tr><th>Time (UTC)</th><th>To</th><th>Subject</th><th>Kind</th><th>Status</th></tr></thead><tbody>
+          ${d.map((m) => html`<tr><td class="small mono">${m.created_at}</td><td class="small">${m.to_email}</td><td class="small" title="${m.body_text}">${m.subject}</td><td class="small">${m.kind}</td><td>${st(m.status)}${m.error ? html` <span class="xs muted">${m.error}</span>` : ''}</td></tr>`)}
+          </tbody></table></div></div>`;
         case 'audit': return html`<div class="panel"><div class="panel-head"><h2>Audit log</h2><span class="small muted">Latest 300 entries</span></div>
           <div class="table-wrap"><table class="table"><thead><tr><th>Time (UTC)</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>
           ${d.map((a) => html`<tr><td class="small mono">${a.created_at}</td><td class="small">${a.email || '—'}</td><td><span class="mono small">${a.action}</span></td><td class="small">${a.entity || ''} ${a.entity_id || ''}</td><td class="xs muted mono" style="max-width:340px;word-break:break-word">${a.details || ''}</td></tr>`)}

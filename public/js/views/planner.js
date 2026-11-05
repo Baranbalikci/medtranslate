@@ -1,6 +1,6 @@
 import { html, icon, esc, fmtDuration, emptyState, toast, $, $$ } from '../ui.js';
 import { state } from '../store.js';
-import { get, post, patch, del } from '../api.js';
+import { get, post, put, patch, del } from '../api.js';
 import { STATIC, ask } from '../nav.js';
 import { ymd, parseLocal, localIso, googleCalendarUrl, openPlanDialog } from '../plan-ui.js';
 
@@ -36,11 +36,12 @@ export default function plannerView() {
             </div>
             <div class="pl-dow">${DAYS.map((d) => html`<span>${d}</span>`)}</div>
             <div class="pl-grid" id="pl-grid"></div>
-            <div class="pl-legend"><span><i class="lg plan"></i> Planned</span><span><i class="lg done"></i> Done</span><span><i class="lg act"></i> You studied</span></div>
+            <div class="pl-legend"><span><i class="lg pl-planned"></i> Planned</span><span><i class="lg done"></i> Done</span><span><i class="lg act"></i> You studied</span></div>
           </section>
           <aside class="pl-side">
             <div class="panel" id="pl-day"></div>
             <div class="panel" id="pl-suggest"></div>
+            <div class="panel pl-mail" id="pl-mail"></div>
             <div class="panel pl-sync" id="pl-sync"></div>
           </aside>
         </div>
@@ -119,6 +120,43 @@ export default function plannerView() {
           ${STATIC ? '' : html`<a class="btn btn-ghost btn-sm" href="/api/plan/export.ics" download>${icon('download', 15)} Download all (.ics)</a>`}`);
       }
 
+      // ── e-mail reminders ──────────────────────────────────────────────
+      const OFF = { 10: '10 min before', 30: '30 min before', 60: '1 hour before', 180: '3 hours before', 1440: '1 day before', 2880: '2 days before' };
+      const deviceTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+      let prefs = null;
+      async function mail() {
+        const box = $('#pl-mail', root);
+        if (STATIC) { box.innerHTML = String(html`<div class="panel-head"><h3>${icon('bell', 16)} E-mail reminders</h3></div><p class="small muted" style="margin:0">Reminder e-mails (“Tomorrow: … at 09:00”) are part of the full server version. This browser-only demo cannot send e-mail.</p>`); return; }
+        try { prefs = await get('/api/plan/prefs'); } catch { box.innerHTML = ''; return; }
+        const p = prefs;
+        box.innerHTML = String(html`<div class="panel-head"><h3>${icon('bell', 16)} E-mail reminders</h3>
+          <label class="switch"><input type="checkbox" id="mail-on" ${p.enabled ? 'checked' : ''} aria-label="Send reminder e-mails"><span></span></label></div>
+          <p class="small muted" style="margin:0 0 10px">We e-mail <b>${p.email}</b> before each planned session: “Tomorrow: … at 09:00 — don’t forget.”</p>
+          <div class="mail-offsets ${p.enabled ? '' : 'off'}">${p.offsetChoices.map((o) => html`<label class="mo ${p.offsets.includes(o) ? 'on' : ''}"><input type="checkbox" value="${o}" ${p.offsets.includes(o) ? 'checked' : ''}> ${OFF[o]}</label>`)}</div>
+          <p class="xs muted" style="margin:10px 0">Time zone: <b>${p.tz}</b> · <button type="button" class="link-btn xs" data-tzset>use this device’s (${deviceTz()})</button></p>
+          <div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-ghost btn-sm" id="mail-test">${icon('mail', 15)} Send test e-mail</button></div>
+          ${p.mailConnected ? '' : html`<p class="xs mail-warn" style="margin:10px 0 0">${icon('info', 13)} E-mail delivery is not connected on this server yet (no mail provider key). Reminders are prepared and stored in the admin outbox, but nothing is sent.</p>`}`);
+      }
+      async function savePrefs(change) {
+        const next = { enabled: prefs.enabled, offsets: prefs.offsets, tz: prefs.tz, ...change };
+        try { await put('/api/plan/prefs', next); } catch (err) { toast(err.message, 'error'); }
+        mail();
+      }
+      root.addEventListener('change', (e) => {
+        if (e.target.id === 'mail-on') savePrefs({ enabled: e.target.checked, tz: deviceTz() });
+        else if (e.target.closest('.mail-offsets')) savePrefs({ offsets: $$('.mail-offsets input:checked', root).map((i) => Number(i.value)) });
+      });
+      root.addEventListener('click', async (e) => {
+        if (e.target.closest('[data-tzset]')) { savePrefs({ tz: deviceTz() }); return; }
+        if (e.target.closest('#mail-test')) {
+          try {
+            const r = await post('/api/plan/test-email', {});
+            toast(r.status === 'sent' ? `Test e-mail sent to ${r.to}.` : r.status === 'failed' ? 'Sending failed — see the admin outbox.' : 'No mail provider connected: the test e-mail was only stored in the outbox, not sent.', r.status === 'sent' ? 'success' : 'error');
+          } catch (err) { toast(err.message, 'error'); }
+        }
+      });
+      mail();
+
       const refresh = async () => { ({ items } = await get('/api/plan')); stats(); grid(); day(); suggest(); };
       stats(); grid(); day(); suggest(); sync();
 
@@ -137,7 +175,7 @@ export default function plannerView() {
           const { courses } = await get('/api/courses');
           const wrap = document.createElement('div'); wrap.className = 'modal-backdrop';
           wrap.innerHTML = String(html`<div class="modal plan-modal"><div class="pm-head"><span class="ic">${icon('calendar', 20)}</span><div><h3>Choose a course</h3><p class="small muted">for ${parseLocal(`${selected}T12:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div></div>
-            <div class="pm-courses">${courses.map((c) => html`<button type="button" class="sg-row pick" data-pick="${c.slug}"><img src="${c.poster}" alt=""><div><b>${c.title}</b><small>${c.specialty?.name} · ${fmtDuration(c.durationSec)}</small></div></button>`)}</div>
+            <div class="pm-courses">${courses.map((c) => html`<button type="button" class="sg-row pick" data-pick="${c.slug}"><img src="${c.poster}" alt=""><div><b>${c.title}</b><small>${c.topic?.name || c.specialty?.name} · ${fmtDuration(c.durationSec)}</small></div></button>`)}</div>
             <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-ghost btn-sm" data-no>Cancel</button></div></div>`);
           document.body.append(wrap);
           wrap.addEventListener('click', (ev) => {

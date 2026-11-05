@@ -3,6 +3,8 @@ import { get, all, run, audit } from '../db.js';
 import { config } from '../config.js';
 import { loadCourseById, loadCourseBySlug, courseCard, isPubliclyVisible } from '../catalog.js';
 import { bad, notFound, str } from '../http.js';
+import { OFFSETS, getPrefs, unsubToken, buildReminder } from '../services/reminders.js';
+import { sendMail, mailConnected } from '../services/mail.js';
 
 const AUTH = { auth: true };
 const WHEN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -44,10 +46,45 @@ export function registerPlanRoutes(r) {
     const b = await ctx.json();
     const start = b.startAt != null ? b.startAt : row.start_at;
     if (!WHEN.test(start)) throw bad('Please choose a date and time.');
+    if (start !== row.start_at) run('DELETE FROM plan_reminders WHERE plan_id = ?', row.id);
     run('UPDATE plan_items SET start_at = ?, done = ?, note = ? WHERE id = ?', start, b.done != null ? (b.done ? 1 : 0) : row.done,
       b.note !== undefined ? str(b.note, { max: 300 }) : row.note, row.id);
     return view(get('SELECT * FROM plan_items WHERE id = ?', row.id), ctx.user);
   }, AUTH);
+
+  // ── e-mail reminders ────────────────────────────────────────────────────
+  r.get('/api/plan/prefs', (ctx) => ({ ...getPrefs(ctx.user.id), email: ctx.user.email, mailConnected: mailConnected(), offsetChoices: OFFSETS }), AUTH);
+
+  r.put('/api/plan/prefs', async (ctx) => {
+    const b = await ctx.json();
+    const offsets = [...new Set((Array.isArray(b.offsets) ? b.offsets : []).map(Number).filter((x) => OFFSETS.includes(x)))].sort((x, y) => y - x);
+    let tz = String(b.tz || 'UTC'); try { new Intl.DateTimeFormat('en', { timeZone: tz }); } catch { tz = 'UTC'; }
+    if (b.enabled && !offsets.length) throw bad('Choose at least one reminder time.');
+    run(`INSERT INTO plan_prefs (user_id, email_on, offsets, tz, updated_at) VALUES (?,?,?,?, datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET email_on = excluded.email_on, offsets = excluded.offsets, tz = excluded.tz, updated_at = excluded.updated_at`,
+    ctx.user.id, b.enabled ? 1 : 0, JSON.stringify(offsets), tz);
+    audit(ctx.user.id, b.enabled ? 'plan.reminders_on' : 'plan.reminders_off', 'user', ctx.user.id);
+    return { ...getPrefs(ctx.user.id), email: ctx.user.email, mailConnected: mailConnected(), offsetChoices: OFFSETS };
+  }, AUTH);
+
+  r.post('/api/plan/test-email', async (ctx) => {
+    const next = get("SELECT * FROM plan_items WHERE user_id = ? AND done = 0 ORDER BY start_at LIMIT 1", ctx.user.id);
+    const c = next ? loadCourseById(next.course_id) : null;
+    const item = next || { start_at: new Date(Date.now() + 864e5).toISOString().slice(0, 16), minutes: 30, note: '' };
+    const course = c || { slug: '', title: 'Your first planned course' };
+    const p = getPrefs(ctx.user.id);
+    const msg = buildReminder({ user: ctx.user, course, item, offset: 1440, tz: p.tz });
+    const res = await sendMail({ userId: ctx.user.id, to: ctx.user.email, kind: 'test', ...msg });
+    return { status: res.status, to: ctx.user.email, mailConnected: mailConnected() };
+  }, AUTH);
+
+  r.get('/api/plan/unsubscribe', (ctx) => {
+    const id = Number(ctx.query.u); const t = String(ctx.query.t || '');
+    const ok = id && t.length === 32 && t === unsubToken(id);
+    if (ok) run('UPDATE plan_prefs SET email_on = 0 WHERE user_id = ?', id);
+    ctx.res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    ctx.res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>MedTranslate</title><body style="font-family:system-ui;max-width:480px;margin:15vh auto;padding:0 20px"><h2>${ok ? 'Reminder e-mails switched off' : 'This link is not valid'}</h2><p>${ok ? 'You will no longer receive planner reminders. You can switch them on again in your planner.' : 'Please manage reminders in your planner.'}</p><p><a href="/planner">Open planner</a></p>`);
+  });
 
   r.delete('/api/plan/:id', (ctx) => { run('DELETE FROM plan_items WHERE id = ? AND user_id = ?', Number(ctx.params.id), ctx.user.id); return { ok: true }; }, AUTH);
 

@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/server.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch server/server.js",
-    "media": "node tools/generate-media.mjs",
+    "media": "node tools/slides/render-slides.mjs",
     "reset-db": "node --disable-warning=ExperimentalWarning tools/reset-db.mjs",
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
     "build:static": "node --disable-warning=ExperimentalWarning tools/build-static.mjs"

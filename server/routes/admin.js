@@ -106,11 +106,12 @@ export function registerAdminRoutes(r) {
     const specialtyId = b.specialty ? get('SELECT id FROM specialties WHERE slug = ?', b.specialty)?.id : null;
     const specialty2Id = b.secondarySpecialty ? get('SELECT id FROM specialties WHERE slug = ?', b.secondarySpecialty)?.id : null;
     const providerId = b.provider ? get('SELECT id FROM providers WHERE slug = ?', b.provider)?.id : null;
-    run(`UPDATE courses SET title = ?, description = ?, objectives = ?, specialty_id = ?, secondary_specialty_id = ?, provider_id = ?, level = ?,
+    const topicId = b.topic ? get('SELECT id FROM topics WHERE slug = ?', b.topic)?.id : null;
+    run(`UPDATE courses SET title = ?, description = ?, objectives = ?, specialty_id = ?, secondary_specialty_id = ?, provider_id = ?, topic_id = ?, level = ?,
          original_language = ?, access = ?, price_cents = ?, featured = ?, release_date = ?, media_has_audio = ?, duration_sec = ?, updated_at = datetime('now') WHERE id = ?`,
       str(b.title, { required: true, max: 200, name: 'Title' }), str(b.description, { max: 4000 }) || '',
       JSON.stringify((Array.isArray(b.objectives) ? b.objectives : []).map((o) => String(o).slice(0, 300)).filter(Boolean).slice(0, 12)),
-      specialtyId ?? null, specialty2Id ?? null, providerId ?? null, oneOf(b.level || c.level, LEVELS, 'Level'),
+      specialtyId ?? null, specialty2Id ?? null, providerId ?? null, topicId ?? null, oneOf(b.level || c.level, LEVELS, 'Level'),
       LANGUAGE_CODES.has(b.originalLanguage) ? b.originalLanguage : c.original_language, oneOf(b.access || c.access, ['free', 'subscription'], 'Access'),
       Math.max(0, Math.round(Number(b.priceCents) || 0)), b.featured ? 1 : 0, isoDate(b.releaseDate, 'Release date'), b.mediaHasAudio ? 1 : 0,
       Math.max(0, Math.round(Number(b.durationSec) || c.duration_sec)), c.id);
@@ -352,6 +353,7 @@ export function registerAdminRoutes(r) {
   r.get('/api/admin/taxonomy', () => ({
     specialties: all('SELECT * FROM specialties ORDER BY name'),
     providers: all('SELECT * FROM providers ORDER BY name'),
+    topics: all('SELECT t.*, s.slug AS specialty FROM topics t LEFT JOIN specialties s ON s.id = t.specialty_id ORDER BY t.sort, t.name'),
     focus: launchFocus(),
     focusLocked: process.env.LAUNCH_FOCUS !== undefined,
   }), STAFF);
@@ -370,6 +372,16 @@ export function registerAdminRoutes(r) {
     const name = str(b.name, { required: true, max: 80, name: 'Name' });
     run('INSERT INTO specialties (slug, name, description, icon) VALUES (?,?,?,?)', slugify(name), name, str(b.description, { max: 300 }), 'stethoscope');
     audit(ctx.user.id, 'specialty.created', 'specialty', slugify(name));
+    return { ok: true };
+  }, ADMIN);
+  r.post('/api/admin/topics', async (ctx) => {
+    const b = await ctx.json();
+    const name = str(b.name, { required: true, max: 80, name: 'Name' });
+    const spec = get('SELECT id FROM specialties WHERE slug = ?', String(b.specialty || launchFocus() || 'emergency-medicine'));
+    if (!spec) throw bad('Unknown specialty.');
+    const accent = /^#[0-9a-fA-F]{6}$/.test(b.accent || '') ? b.accent : '#22D3EE';
+    run('INSERT INTO topics (slug, name, description, icon, accent, specialty_id, sort) VALUES (?,?,?,?,?,?,?)', slugify(name), name, str(b.description, { max: 300 }), 'stethoscope', accent, spec.id, get('SELECT COALESCE(MAX(sort),0)+1 AS n FROM topics').n);
+    audit(ctx.user.id, 'topic.created', 'topic', slugify(name));
     return { ok: true };
   }, ADMIN);
   r.post('/api/admin/providers', async (ctx) => {
@@ -448,5 +460,6 @@ export function registerAdminRoutes(r) {
     return { ok: true };
   }, ADMIN);
 
+  r.get('/api/admin/outbox', () => all('SELECT id, to_email, subject, kind, status, error, created_at, body_text FROM outbox ORDER BY id DESC LIMIT 200'), ADMIN);
   r.get('/api/admin/audit', () => all(`SELECT a.*, u.email FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 300`), ADMIN);
 }

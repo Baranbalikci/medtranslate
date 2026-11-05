@@ -19,7 +19,7 @@ export default function courseView() {
       return html`
       <section class="course-hero">
         <div class="container wide">
-          <div class="crumbs"><a href="/courses">Courses</a><span>/</span>${c.specialty ? html`<a href="/specialties/${c.specialty.slug}">${c.specialty.name}</a>` : ''}</div>
+          <div class="crumbs"><a href="/courses">Courses</a><span>/</span>${c.topic ? html`<a href="/topics/${c.topic.slug}">${c.topic.name}</a>` : c.specialty ? html`<a href="/specialties/${c.specialty.slug}">${c.specialty.name}</a>` : ''}</div>
           <div class="watch">
             <div class="watch-main" id="player-host"><div class="player"><div class="p-loading"><span class="spinner"></span></div></div></div>
             <aside class="transcript-panel" aria-label="Transcript">

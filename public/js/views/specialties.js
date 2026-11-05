@@ -1,36 +1,42 @@
-import { html, icon, $ } from '../ui.js';
+import { html, icon } from '../ui.js';
 import { state } from '../store.js';
 import { get } from '../api.js';
 import { specIcon } from './home.js';
 
+// Emergency-focus mode shows TOPICS only (accent bento); the full specialty list stays hidden until
+// the launch focus is widened in the admin area.
 export default {
   title: () => (state.meta.focus ? 'Emergency medicine topics' : 'Medical Specialties'),
   description: 'Browse multilingual emergency medicine education by topic.',
   render() {
     const m = state.meta; const focus = m.focus;
-    const list = focus ? m.specialties.filter((s) => s.course_count && s.slug !== focus.slug) : m.specialties;
+    const list = focus ? (m.topics || []) : m.specialties;
+    const base = focus ? '/topics' : '/specialties';
+    const live = list.filter((s) => s.course_count);
+    const soon = list.filter((s) => !s.course_count);
+    const card = (s, i) => html`<a class="topic-tile ${i === 0 ? 'big' : ''}" href="${base}/${s.slug}" data-topic="${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
+      <span class="tt-glow" aria-hidden="true"></span>
+      <span class="tt-ic">${specIcon(s.icon)}</span>
+      <h3>${s.name}</h3><p>${s.description || ''}</p>
+      <span class="tt-titles"></span>
+      <span class="tt-foot"><b>${s.course_count} course${s.course_count > 1 ? 's' : ''}</b><span class="tt-go">${icon('arrow', 16)}</span></span></a>`;
     return html`
-    <section class="page-head"><div class="container">
+    <section class="page-head topics-head"><div class="container">
       <div class="crumbs"><a href="/">Home</a><span>/</span><span>${focus ? 'Topics' : 'Specialties'}</span></div>
-      <h1>${focus ? 'Emergency medicine topics' : 'Medical specialties'}</h1>
-      <p class="lead">${focus ? 'Every course is filed under emergency medicine and tagged with the field it draws on. More specialties follow once the launch focus widens.' : 'From emergency medicine to ophthalmology — explore licensed courses in your field. New specialties are added as partner catalogues grow.'}</p>
+      <h1>${focus ? 'Emergency medicine, topic by topic' : 'Medical specialties'}</h1>
+      <p class="lead">${focus ? 'Pick the situation your team faces. Every course plays in your language with AI subtitles and AI voice.' : 'Explore licensed courses in your field.'}</p>
     </div></section>
     <section class="section-sm"><div class="container">
-      <div class="grid-3">
-        ${list.map((s) => html`<a class="spec-card" href="/specialties/${s.slug}" data-topic="${s.slug}">
-          <span class="ic">${specIcon(s.icon)}</span><h3>${s.name}</h3><p>${s.description}</p>
-          <span class="topic-thumbs" aria-hidden="true"></span>
-          <span class="row between small"><span class="muted">${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</span><span>${icon('arrow', 16)}</span></span></a>`)}
-      </div>
+      <div class="topic-bento">${live.map(card)}</div>
+      ${soon.length ? html`<h2 class="soon-h">In preparation</h2><div class="soon-row">${soon.map((s) => html`<span class="soon-chip" style="--ac:${s.accent || '#22D3EE'}">${specIcon(s.icon)} ${s.name}</span>`)}</div>` : ''}
     </div></section>`;
   },
   mount(root) {
-    // Poster thumbnails for each topic card.
     get('/api/courses').then(({ courses }) => {
       root.querySelectorAll('[data-topic]').forEach((card) => {
         const slug = card.dataset.topic;
-        const posters = courses.filter((c) => c.specialty?.slug === slug || c.secondarySpecialty?.slug === slug).slice(0, 3).map((c) => c.poster).filter(Boolean);
-        card.querySelector('.topic-thumbs').innerHTML = String(html`${posters.map((p) => html`<img src="${p}" alt="" loading="lazy">`)}`);
+        const hit = courses.filter((c) => c.topic?.slug === slug || c.specialty?.slug === slug).slice(0, 2);
+        card.querySelector('.tt-titles').innerHTML = String(html`${hit.map((c) => html`<span class="tt-course">${c.poster ? html`<img src="${c.poster}" alt="" loading="lazy">` : ''}<span>${c.title}</span></span>`)}`);
       });
     }).catch(() => {});
   },

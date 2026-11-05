@@ -4,7 +4,7 @@ import path from 'node:path';
 import { db, get, run, tx, getSetting, setSetting } from './db.js';
 import { config } from './config.js';
 import { hashPassword } from './auth.js';
-import { SPECIALTIES, PROVIDERS, PLANS, COURSES, GLOSSARY } from './seed-data.js';
+import { SPECIALTIES, PROVIDERS, PLANS, COURSES, GLOSSARY, TOPICS, COURSE_TOPIC } from './seed-data.js';
 import { AFRICAN_TRANSLATIONS } from './seed-africa.js';
 import { SHOWCASE_TRANSLATIONS } from './seed-showcase.js';
 
@@ -22,6 +22,8 @@ function seedCatalog() {
     for (const [slug, name, description, icon] of SPECIALTIES) {
       run('INSERT INTO specialties (slug, name, description, icon) VALUES (?,?,?,?)', slug, name, description, icon);
     }
+    const emergencyId = get("SELECT id FROM specialties WHERE slug = 'emergency-medicine'").id;
+    TOPICS.forEach(([slug, name, description, icon, accent], i) => run('INSERT INTO topics (slug, name, description, icon, accent, specialty_id, sort) VALUES (?,?,?,?,?,?,?)', slug, name, description, icon, accent, emergencyId, i));
     for (const [slug, name, country, notes] of PROVIDERS) {
       run('INSERT INTO providers (slug, name, country, notes, is_demo) VALUES (?,?,?,?,1)', slug, name, country, notes);
     }
@@ -45,6 +47,7 @@ function seedCatalog() {
         prov(c.provider), c.level, 'en', duration, c.access, c.price, `videos/${c.slug}.mp4`, `posters/${c.slug}.jpg`,
         c.draft ? 'draft' : 'published', c.featured ? 1 : 0, c.published);
       const courseId = Number(r.lastInsertRowid);
+      if (COURSE_TOPIC[c.slug]) run('UPDATE courses SET topic_id = (SELECT id FROM topics WHERE slug = ?) WHERE id = ?', COURSE_TOPIC[c.slug], courseId);
 
       c.cues.forEach(([start, end, speaker, text, slide], idx) => {
         run('INSERT INTO cues (course_id, idx, start_sec, end_sec, speaker, text, slide) VALUES (?,?,?,?,?,?,?)',
@@ -81,6 +84,14 @@ function seedCatalog() {
 function migrate() {
   const cols = db.prepare('PRAGMA table_info(licenses)').all().map((c) => c.name);
   if (!cols.includes('allow_live_ai')) db.exec('ALTER TABLE licenses ADD COLUMN allow_live_ai INTEGER NOT NULL DEFAULT 0');
+  const ccols = db.prepare('PRAGMA table_info(courses)').all().map((c) => c.name);
+  if (!ccols.includes('topic_id')) db.exec('ALTER TABLE courses ADD COLUMN topic_id INTEGER REFERENCES topics(id)');
+  if (!get("SELECT 1 FROM settings WHERE key = 'demo_topics_v1'") && get("SELECT 1 FROM specialties WHERE slug = 'emergency-medicine'")) {
+    const emergencyId = get("SELECT id FROM specialties WHERE slug = 'emergency-medicine'").id;
+    TOPICS.forEach(([slug, name, description, icon, accent], i) => run('INSERT OR IGNORE INTO topics (slug, name, description, icon, accent, specialty_id, sort) VALUES (?,?,?,?,?,?,?)', slug, name, description, icon, accent, emergencyId, i));
+    for (const [slug, topic] of Object.entries(COURSE_TOPIC)) run('UPDATE courses SET topic_id = (SELECT id FROM topics WHERE slug = ?) WHERE slug = ? AND is_demo = 1', topic, slug);
+    setSetting('demo_topics_v1', true);
+  }
   // One-time: launch with emergency medicine only, and file the emergency-relevant demo courses under it.
   if (!get("SELECT 1 FROM settings WHERE key = 'launch_focus'")) setSetting('launch_focus', 'emergency-medicine');
   if (!get("SELECT 1 FROM settings WHERE key = 'demo_mapping_emergency_v1'") && get('SELECT 1 FROM specialties LIMIT 1')) {

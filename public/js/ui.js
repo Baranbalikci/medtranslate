@@ -68,6 +68,7 @@ const P = {
   forward: '<path d="M13 6l7 6-7 6zM4 6l7 6-7 6z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  bell: '<path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
@@ -132,7 +133,7 @@ export function courseCard(c, languages) {
       </div>
       <div class="course-body">
         <div class="course-meta-top">
-          <span class="eyebrow">${c.specialty?.name || 'General'}</span>
+          <span class="eyebrow">${c.topic?.name || c.specialty?.name || 'General'}</span>
           <span class="level level-${c.level}">${levelLabel[c.level]}</span>
         </div>
         <h3 class="course-title">${c.title}</h3>
@@ -159,7 +160,7 @@ export function courseRow(c, languages) {
     <a href="/courses/${c.slug}" class="cr-link" aria-label="${c.title}">
       <div class="cr-thumb">${c.poster ? html`<img src="${c.poster}" alt="" loading="lazy" decoding="async">` : ''}<span class="course-duration">${icon('clock', 13)} ${fmtDuration(c.durationSec)}</span><span class="thumb-play">${icon('play', 18)}</span></div>
       <div class="cr-main">
-        <div class="course-meta-top"><span class="eyebrow">${c.specialty?.name || 'General'}</span><span class="level level-${c.level}">${levelLabel[c.level]}</span>${c.isDemo ? html`<span class="badge badge-warn">Demo</span>` : ''}</div>
+        <div class="course-meta-top"><span class="eyebrow">${c.topic?.name || c.specialty?.name || 'General'}</span><span class="level level-${c.level}">${levelLabel[c.level]}</span>${c.isDemo ? html`<span class="badge badge-warn">Demo</span>` : ''}</div>
         <h3 class="course-title">${c.title}</h3>
         <p class="course-desc">${c.description}</p>
         <div class="cr-meta"><span>${icon('building', 14)} ${c.provider.name}</span><span>${icon('globe', 14)} ${c.languages.length} languages</span>${v ? html`<span class="voice">${icon('volume', 14)} ${v} AI voices</span>` : ''}<span>${icon('calendar', 14)} ${fmtDate(c.releaseDate)}</span></div>

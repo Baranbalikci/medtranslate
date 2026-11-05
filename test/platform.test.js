@@ -254,8 +254,9 @@ test('launch focus: only emergency medicine is public; admin can widen the catal
   assert.equal((await pub('GET', '/api/courses/dermoscopy-pigmented-lesions')).status, 404, 'non-emergency course is not reachable by direct link');
   const meta = (await pub('GET', '/api/meta')).data;
   assert.equal(meta.focus.slug, 'emergency-medicine');
-  assert.ok(meta.specialties.some((s) => s.slug === 'neurology' && s.course_count === 1), 'secondary fields appear as topics');
-  assert.ok(!meta.specialties.some((s) => s.slug === 'dermatology'));
+  assert.deepEqual(meta.specialties, [], 'no other specialty is visible in focus mode');
+  assert.ok(meta.topics.some((t) => t.slug === 'neurological-emergencies' && t.course_count === 1), 'emergency topics are listed');
+  assert.equal((await pub('GET', '/api/courses?topic=sepsis-shock')).data.courses.length, 1);
   assert.ok(meta.countries.find((c) => c.code === 'KE').languages.includes('sw'), 'countries list the languages spoken there');
   const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
   assert.ok(sitemap.includes('stroke-first-60-minutes') && !sitemap.includes('dermoscopy'));
@@ -269,4 +270,39 @@ test('launch focus: only emergency medicine is public; admin can widen the catal
   assert.equal((await pub('GET', '/api/meta')).data.focus, null);
   await a('PUT', '/api/admin/focus', { specialty: 'emergency-medicine' });
   assert.equal((await pub('GET', '/api/courses/dermoscopy-pigmented-lesions')).status, 404);
+});
+
+test('planner e-mail reminders: windows, de-duplication, skipped past windows', async () => {
+  process.env.DATA_DIR = dataDir; // the modules below open the same database as the server under test
+  const { processReminders, zonedToEpoch } = await import('../server/services/reminders.js');
+  const { run, get, all } = await import('../server/db.js');
+  assert.equal(zonedToEpoch('2026-06-01T09:00', 'Europe/Berlin'), Date.parse('2026-06-01T07:00:00Z'));
+  assert.equal(zonedToEpoch('2026-01-15T09:00', 'Africa/Nairobi'), Date.parse('2026-01-15T06:00:00Z'));
+  const u = client();
+  await u('POST', '/api/auth/register', { email: 'plan-mail@example.test', password: 'Password12345', firstName: 'Mia', lastName: 'Test', country: 'DE', acceptTerms: true, confirmProfessional: true });
+  const pre = (await u('GET', '/api/plan/prefs')).data;
+  assert.equal(pre.enabled, false);
+  assert.equal((await u('PUT', '/api/plan/prefs', { enabled: true, offsets: [], tz: 'UTC' })).status, 400);
+  assert.equal((await u('PUT', '/api/plan/prefs', { enabled: true, offsets: [1440, 60], tz: 'Europe/Berlin' })).data.enabled, true);
+  const start = new Date(Date.now() + 26 * 3600e3 + 2 * 60e3).toISOString().slice(0, 16); // UTC wall clock; tz is Berlin → real start is ~2 h earlier
+  const item = (await u('POST', '/api/plan', { slug: 'sepsis-hour-one', startAt: start })).data;
+  const me = get("SELECT id FROM users WHERE email = 'plan-mail@example.test'");
+  // Planned "just now" → no reminder is sent for windows that had already begun when it was created.
+  assert.equal(await processReminders(Date.now()), 0);
+  // Pretend the item was created long ago, then move the clock to the 24 h window.
+  run("UPDATE plan_items SET created_at = datetime('now','-3 days') WHERE id = ?", item.id);
+  const startMs = (await import('../server/services/reminders.js')).zonedToEpoch(start, 'Europe/Berlin');
+  assert.equal(await processReminders(startMs - 1440 * 60e3 + 30e3), 1);
+  assert.equal(await processReminders(startMs - 1440 * 60e3 + 90e3), 0, 'sent only once');
+  assert.equal(await processReminders(startMs - 60 * 60e3 + 10e3), 1);
+  assert.equal(await processReminders(startMs + 1000), 0, 'nothing after the start');
+  const mails = all('SELECT * FROM outbox WHERE user_id = ? ORDER BY id', me.id);
+  assert.equal(mails.length, 2);
+  assert.ok(/Tomorrow/i.test(mails[0].subject) && /In 1 hour/i.test(mails[1].subject));
+  assert.equal(mails[0].status, 'not_configured', 'no mail provider configured → stored, not delivered');
+  assert.ok(mails[0].body_text.includes('/courses/sepsis-hour-one') && mails[0].body_text.includes('unsubscribe?u='));
+  const link = mails[0].body_text.match(/http\S+unsubscribe\?\S+/)[0];
+  assert.equal((await fetch(link.replace(/^https?:\/\/[^/]+/, BASE))).status, 200);
+  assert.equal((await u('GET', '/api/plan/prefs')).data.enabled, false, 'unsubscribe link switches reminders off');
+  assert.equal((await fetch(`${BASE}/api/plan/unsubscribe?u=${me.id}&t=bad`)).status, 400);
 });

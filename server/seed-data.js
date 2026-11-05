@@ -25,6 +25,29 @@ export const SPECIALTIES = [
   ['urology', 'Urology', 'Kidney, urinary tract and male reproductive health.', 'drop'],
 ];
 
+// Topics inside a specialty. While the launch focus is emergency medicine these are the ONLY
+// categories the public sees (other specialties stay hidden until they are activated).
+export const TOPICS = [
+  ['cardiac-emergencies', 'Cardiac emergencies', 'Chest pain, acute coronary syndromes and rhythm problems in the first hour.', 'heart', '#FB7185'],
+  ['neurological-emergencies', 'Neurological emergencies', 'Stroke, seizures and altered consciousness.', 'brain', '#A78BFA'],
+  ['sepsis-shock', 'Sepsis & shock', 'Recognition, cultures, antimicrobials, fluids and vasopressors.', 'pulse', '#FBBF24'],
+  ['airway-breathing', 'Airway & breathing', 'Safe intubation, oxygenation and ventilation.', 'mask', '#38BDF8'],
+  ['abdominal-emergencies', 'Abdominal emergencies', 'Gastrointestinal bleeding, acute pain and the acute abdomen.', 'gut', '#FB923C'],
+  ['eye-emergencies', 'Eye emergencies', 'Vision-threatening problems and when to refer.', 'eye', '#34D399'],
+  ['imaging-in-the-ed', 'Imaging in the ED', 'Reading chest films and choosing the right scan.', 'scan', '#67E8F9'],
+  ['paediatric-emergencies', 'Paediatric emergencies', 'Fever, breathing problems and dehydration in children.', 'child', '#F472B6'],
+  // Planned topics (not shown until a course is filed under them)
+  ['trauma', 'Trauma', 'Primary survey, bleeding control and major trauma teamwork.', 'bone', '#F87171'],
+  ['resuscitation', 'Resuscitation', 'Cardiac arrest, post-ROSC care and team leadership.', 'monitor', '#60A5FA'],
+  ['toxicology', 'Toxicology & overdose', 'Poisoning, antidotes and supportive care.', 'drop', '#A3E635'],
+  ['environmental-emergencies', 'Environmental emergencies', 'Heat, cold, drowning and altitude.', 'zap', '#2DD4BF'],
+];
+export const COURSE_TOPIC = {
+  'acs-early-ecg-recognition': 'cardiac-emergencies', 'stroke-first-60-minutes': 'neurological-emergencies', 'sepsis-hour-one': 'sepsis-shock',
+  'rapid-sequence-induction-checklist': 'airway-breathing', 'upper-gi-bleeding-initial-management': 'abdominal-emergencies',
+  'red-eye-when-to-refer': 'eye-emergencies', 'chest-xray-systematic-reading': 'imaging-in-the-ed', 'pediatric-fever-without-source': 'paediatric-emergencies',
+};
+
 export const PROVIDERS = [
   ['velmora', 'Velmora Medical Academy (Demo)', 'DE', 'Fictional provider used for demo content.'],
   ['northcliff', 'Northcliff Clinical Education (Demo)', 'GB', 'Fictional provider used for demo content.'],

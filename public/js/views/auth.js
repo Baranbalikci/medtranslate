@@ -47,7 +47,7 @@ export default function authView(ctx) {
             <label class="field"><span>Country</span><select name="country" required><option value="">Select…</option>${m.countries.map((x) => html`<option value="${x.code}">${x.name}</option>`)}</select></label>
             <label class="field"><span>Preferred language</span><select name="preferredLanguage">${m.languages.map((l) => html`<option value="${l.code}" ${navigator.language?.startsWith(l.code) ? 'selected' : ''}>${l.native}</option>`)}</select></label>
             <label class="field"><span>Profession <small>(optional)</small></span><select name="profession"><option value="">—</option>${m.professions.map((p) => html`<option>${p}</option>`)}</select></label>
-            <label class="field"><span>Specialty <small>(optional)</small></span><select name="specialty"><option value="">—</option>${m.specialties.map((s) => html`<option>${s.name}</option>`)}</select></label>
+            ${m.focus ? '' : html`<label class="field"><span>Specialty <small>(optional)</small></span><select name="specialty"><option value="">—</option>${m.specialties.map((s) => html`<option>${s.name}</option>`)}</select></label>`}
           </div>
           <label class="check"><input type="checkbox" name="confirmProfessional" required> <span>I am a healthcare professional, in training, or a medical student. The content is intended for professional education.</span></label>
           <label class="check"><input type="checkbox" name="acceptTerms" required> <span>I accept the <a href="/legal/agb" target="_blank">terms of use</a> and have read the <a href="/legal/datenschutz" target="_blank">privacy policy</a>.</span></label>

@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS specialties (
   description TEXT,
   icon TEXT
 );
+CREATE TABLE IF NOT EXISTS topics (
+  id INTEGER PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT,
+  accent TEXT NOT NULL DEFAULT '#22D3EE',
+  specialty_id INTEGER REFERENCES specialties(id),
+  sort INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS providers (
   id INTEGER PRIMARY KEY,
   slug TEXT NOT NULL UNIQUE,
@@ -52,6 +62,7 @@ CREATE TABLE IF NOT EXISTS courses (
   objectives TEXT NOT NULL DEFAULT '[]',
   specialty_id INTEGER REFERENCES specialties(id),
   secondary_specialty_id INTEGER REFERENCES specialties(id),
+  topic_id INTEGER REFERENCES topics(id),
   provider_id INTEGER REFERENCES providers(id),
   level TEXT NOT NULL DEFAULT 'intermediate' CHECK (level IN ('foundation','intermediate','advanced')),
   original_language TEXT NOT NULL DEFAULT 'en',
@@ -322,6 +333,32 @@ CREATE TABLE IF NOT EXISTS plan_items (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_plan_user ON plan_items(user_id, start_at);
+CREATE TABLE IF NOT EXISTS plan_prefs (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  email_on INTEGER NOT NULL DEFAULT 0,
+  offsets TEXT NOT NULL DEFAULT '[1440,60]',   -- minutes before start
+  tz TEXT NOT NULL DEFAULT 'UTC',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS plan_reminders (
+  plan_id INTEGER NOT NULL REFERENCES plan_items(id) ON DELETE CASCADE,
+  offset_min INTEGER NOT NULL,
+  status TEXT NOT NULL,                        -- sent | outbox | failed | skipped
+  at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (plan_id, offset_min)
+);
+CREATE TABLE IF NOT EXISTS outbox (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body_text TEXT NOT NULL,
+  body_html TEXT,
+  kind TEXT NOT NULL DEFAULT 'reminder',
+  status TEXT NOT NULL,                        -- sent | not_configured | failed
+  error TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
