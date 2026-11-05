@@ -80,24 +80,46 @@ export default {
       </div>
     </section>
 
-    <section class="section dark morph" data-fx-scroll>
+    <section class="story" id="how">
       <div class="container">
         <div class="section-head">
           <span class="eyebrow reveal">How AI translation works</span>
           <h2 data-fx="words">From one lecture to a global classroom</h2>
-          <p class="reveal" data-fx="blur">A transparent pipeline where every step is logged and every language is released individually.</p>
+          <p class="reveal" data-fx="blur">Scroll through the pipeline. Every step is logged, and every language is released on its own.</p>
         </div>
-        <div class="pipeline" data-fx-scroll>
-          <div class="pipe-line" aria-hidden="true"><i></i></div>
-          ${[
-            ['Licensed source', 'Original video and transcript from the provider, with rights verified.'],
-            ['Medical AI translation', 'Cue-by-cue translation with glossary-enforced terminology and timing constraints.'],
-            ['Speaker-aware voice', 'AI audio per language, a distinct voice per speaker, time-fitted to the original.'],
-            ['Medical QC', 'Qualified reviewers check terminology, meaning and sync. Decisions are documented.'],
-            ['Release & stream', 'Only approved, licensed languages go live — switchable instantly in the player.'],
-          ].map(([t, d], k) => html`<div class="pipe" style="--k:${k}"><h3>${t}</h3><p>${d}</p></div>`)}
+        <div class="story-grid">
+          <ol class="story-steps">
+            ${[
+              ['Licensed source', 'The provider’s original video and its time-coded transcript are the single source of truth. Rights are checked before anything else happens.', 'file'],
+              ['Medical AI translation', 'Each sentence is translated in context, with a medical glossary enforcing terminology. Numbers, doses and thresholds are never changed.', 'sparkles'],
+              ['Speaker-aware AI voice', 'Every language gets its own voice track: a distinct voice per speaker, each sentence fitted into its original time slot.', 'wave'],
+              ['Medical quality control', 'A qualified reviewer checks terminology, meaning and timing side by side with the original, and the decision is documented.', 'shield'],
+              ['Release — or live, on demand', 'Approved languages go live instantly. Any other language can be translated live while the lecture plays.', 'zap'],
+            ].map(([t, d, ic], k) => html`<li class="story-step" data-step="${k}"><span class="sn">${String(k + 1).padStart(2, '0')}</span><div><h3>${icon(ic, 18)} ${t}</h3><p>${d}</p></div></li>`)}
+          </ol>
+          <div class="story-visual" aria-hidden="true">
+            <div class="sv-frame" data-active="0">
+              <div class="sv-screen">
+                <img src="/media/posters/stroke-first-60-minutes.jpg" alt="">
+                <div class="sv-layer l0"><div class="sv-lines">
+                  <span>Start by establishing the exact time</span><span>the patient was last known well.</span><span class="dim">Check capillary glucose immediately…</span></div>
+                  <span class="sv-chip">${icon('file', 13)} Transcript · English</span></div>
+                <div class="sv-layer l1"><div class="sv-tx">
+                  ${[['DE', 'Ermitteln Sie zuerst den genauen Zeitpunkt …'], ['SW', 'Anza kwa kubaini muda kamili …'], ['FR', 'Commencez par établir l’heure exacte …'], ['AR', 'ابدأ بتحديد الوقت الدقيق …'], ['QU', 'Qallariy yachaspa hayk’aqmi …']].map(([c, t], i) => html`<span style="--i:${i}"><b>${c}</b>${t}</span>`)}
+                </div><span class="sv-chip">${icon('sparkles', 13)} Glossary · STEMI, hs-troponin, LVO</span></div>
+                <div class="sv-layer l2"><div class="sv-wave">${Array.from({ length: 36 }, (_, i) => html`<i style="--i:${i}"></i>`)}</div>
+                  <div class="sv-speakers"><span>${icon('user', 13)} Host · voice A</span><span>${icon('user', 13)} Expert · voice B</span></div></div>
+                <div class="sv-layer l3"><ul class="sv-checks">
+                  ${['Terminology matches glossary', 'Meaning, numbers and doses preserved', 'Readable and in sync'].map((t, i) => html`<li style="--i:${i}">${icon('check', 15)} ${t}</li>`)}
+                </ul><span class="sv-stamp">Approved · reviewer</span></div>
+                <div class="sv-layer l4"><div class="sv-langs">
+                  ${['English', 'Deutsch', 'Kiswahili', 'Français', 'العربية', 'Español', 'አማርኛ', 'Runa Simi', 'हिन्दी', '中文', 'Yorùbá', 'Kreyòl'].map((t, i) => html`<span style="--i:${i}" class="${i > 9 ? 'live' : ''}">${t}${i > 9 ? html` <b>LIVE</b>` : ''}</span>`)}
+                </div></div>
+              </div>
+              <div class="sv-dots">${[0, 1, 2, 3, 4].map((k) => html`<i data-dot="${k}"></i>`)}</div>
+            </div>
+          </div>
         </div>
-        <div class="row reveal" style="margin-top:36px"><a href="/technology" class="btn btn-glass">Read about the technology ${icon('arrow', 16)}</a></div>
       </div>
     </section>
 
@@ -106,11 +128,11 @@ export default {
         <div class="section-head center">
           <span class="eyebrow reveal">Languages</span>
           <h2 data-fx="words">Switch language mid-lecture. No reload.</h2>
-          <p class="reveal" data-fx="blur">Choose subtitles and AI audio independently. Released languages are reviewed per course — and live AI translation covers every language below.</p>
+          <p class="reveal" data-fx="blur">Pick one language and both subtitles and voice follow. Ready languages play instantly; every other language below is translated live while you watch.</p>
         </div>
       </div>
-      <div class="marquee reveal" data-fx="blur"><div class="marquee-track">${row(m.languages.filter((l) => !l.region))}</div></div>
-      <div class="marquee reverse reveal" data-fx="blur"><div class="marquee-track">${row([...africa, ...live.filter((l) => !l.region).slice(0, 4)])}</div></div>
+      <div class="marquee reveal" data-fx="blur"><div class="marquee-track">${row(m.languages.filter((l) => l.region === 'europe' || l.region === 'asia'))}</div></div>
+      <div class="marquee reverse reveal" data-fx="blur"><div class="marquee-track">${row(m.languages.filter((l) => l.region === 'africa' || l.region === 'americas' || l.region === 'mena'))}</div></div>
     </section>
 
     <section class="section africa" data-fx-scroll>
@@ -122,10 +144,10 @@ export default {
           <p class="lead reveal" data-fx="blur">Clinicians in low- and middle-income countries carry the heaviest disease burden with the least access to current continuing education in their own language. That is who we build for first.</p>
           <ul class="checklist reveal" data-fx="blur">
             <li>${icon('zap', 18)}<span><b>Live AI subtitles in any language</b> — Kiswahili, Hausa, Yorùbá, Igbo, isiZulu, Amharic, Somali, Kinyarwanda, Afaan Oromoo — generated while the lecture plays.</span></li>
-            <li>${icon('wave', 18)}<span><b>AI voice tracks</b> already available in Kiswahili and Amharic for featured courses, plus French, Arabic and Portuguese.</span></li>
+            <li>${icon('wave', 18)}<span><b>AI voice tracks</b> — the free Stroke course already speaks Kiswahili, Amharic, Afrikaans, Afaan Oromoo, Setswana and Tigrinya, plus French, Arabic and Portuguese.</span></li>
             <li>${icon('download', 18)}<span><b>Made for slow connections</b> — subtitles need about 1 KB per minute; switch to audio-only or subtitles when bandwidth is short.</span></li>
           </ul>
-          <a class="btn btn-accent btn-lg magnetic reveal" style="margin-top:12px" href="/courses/sepsis-hour-one">Try Kiswahili in the player ${icon('play', 16)}</a>
+          <a class="btn btn-accent btn-lg magnetic reveal" style="margin-top:12px" href="/courses/stroke-first-60-minutes">Try Kiswahili in the player ${icon('play', 16)}</a>
         </div>
         <div class="bandwidth reveal" data-fx="rise3d">
           <h3>Data per minute of lecture</h3>
@@ -221,6 +243,18 @@ export default {
     </section>`;
   },
   mount(root) {
+    // Scroll story: the step nearest the middle of the screen drives the sticky visual.
+    const frame = root.querySelector('.sv-frame');
+    const steps = [...root.querySelectorAll('.story-step')];
+    const storyIo = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) {
+        const k = e.target.dataset.step;
+        frame?.setAttribute('data-active', k);
+        steps.forEach((s2) => s2.classList.toggle('active', s2.dataset.step === k));
+      }
+    }, { rootMargin: '-45% 0px -45% 0px' }) : null;
+    steps.forEach((s2) => storyIo?.observe(s2));
+    if (steps[0]) steps[0].classList.add('active');
     get('/api/courses?featured=1').then(({ courses }) => {
       const host = $('#featured', root); if (!host) return;
       host.innerHTML = String(html`<div class="course-grid">${courses.slice(0, 3).map((c) => courseCard(c, state.meta.languages))}</div>`);
@@ -239,7 +273,7 @@ export default {
         root.querySelectorAll('.tv-lang').forEach((x) => x.classList.toggle('on', x.dataset.l === HERO_LINES[i][0]));
       }, 350);
     }, 3200);
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); storyIo?.disconnect(); };
   },
 };
 

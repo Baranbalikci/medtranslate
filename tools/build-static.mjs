@@ -63,6 +63,7 @@ const result = await esbuild.build({
   plugins: [{
     name: 'static-api',
     setup(b) {
+      b.onResolve({ filter: /(^|\/)i18n-provider\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), 'i18n-provider-static.js') }));
       b.onResolve({ filter: /(^|\/)live\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), 'live-static.js') }));
       b.onResolve({ filter: /views\/admin\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), 'views/admin-static.js') }));
       b.onResolve({ filter: /(^|\/)api\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), args.path.replace(/api\.js$/, 'static-api.js')) }));

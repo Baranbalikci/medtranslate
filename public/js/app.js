@@ -1,3 +1,4 @@
+import { setSiteLanguage, storedSiteLanguage, openChooser } from './pagetx.js';
 import { initFx } from './fx.js';
 import { curPath, curSearch, setUrl, STATIC } from './nav.js';
 import { html, icon, $, $$, esc, toast } from './ui.js';
@@ -111,6 +112,7 @@ function renderHeader() {
         ${NAV.map(([href, label]) => html`<a href="${href}" class="nav-link">${label}</a>`)}
       </nav>
       <div class="header-actions">
+        <button type="button" class="lang-switch" data-action="site-lang" aria-label="Website language">${icon('globe', 17)}<span class="code">${(storedSiteLanguage() || 'en').toUpperCase()}</span></button>
         <a href="/courses" class="icon-btn hide-sm" aria-label="Search courses">${icon('search', 19)}</a>
         ${u ? html`
           ${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-sm hide-sm">${icon('shield', 16)} Admin</a>` : ''}
@@ -125,6 +127,7 @@ function renderHeader() {
         ${NAV.map(([href, label]) => html`<a href="${href}" class="m-link">${label}${icon('arrow', 18)}</a>`)}
         <a href="/about" class="m-link">About Us${icon('arrow', 18)}</a>
         <a href="/faq" class="m-link">FAQ${icon('arrow', 18)}</a>
+        <button type="button" class="m-link" data-action="site-lang">Website language${icon('globe', 18)}</button>
         <div class="m-actions">
           ${u ? html`<a href="/account" class="btn btn-primary btn-block">My account</a>${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-block">Admin dashboard</a>` : ''}`
             : html`<a href="/register" class="btn btn-primary btn-block">Create free account</a><a href="/login" class="btn btn-ghost btn-block">Sign in</a>`}
@@ -260,7 +263,13 @@ onChange(() => renderHeader());
   renderHeader();
   renderFooter();
   await render({ keepScroll: false });
-  showConsent();
+  const siteLang = storedSiteLanguage();
+  if (siteLang) { if (siteLang !== 'en') setSiteLanguage(siteLang, { remember: false }); showConsent(); }
+  else {
+    // First visit: let people pick their language before anything else.
+    openChooser({ firstVisit: true });
+    const wait = setInterval(() => { if (!document.querySelector('.tx-chooser')) { clearInterval(wait); showConsent(); } }, 300);
+  }
 })();
 
 export { esc };

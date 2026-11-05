@@ -1,10 +1,10 @@
 import { get, all, run, parseJson, audit } from '../db.js';
 import { config } from '../config.js';
-import { LANGUAGES, COUNTRIES, PROFESSIONS, LANGUAGE_CODES } from '../languages.js';
+import { LANGUAGES, COUNTRIES, PROFESSIONS, LANGUAGE_CODES, REGIONS } from '../languages.js';
 import { loadCourseBySlug, loadPublishedCourses, courseCard, courseDetail } from '../catalog.js';
 import { licenseFor, territoryAllows, entitlement, accreditationFor, availableTracks } from '../compliance.js';
 import { signMediaPath } from '../services/media.js';
-import { translationStatus, translateCues, ProviderNotConnectedError } from '../services/translation.js';
+import { translationStatus, translateCues, translateStrings, ProviderNotConnectedError } from '../services/translation.js';
 import crypto from 'node:crypto';
 import { paymentMode } from '../services/payments.js';
 import { HttpError, notFound, bad, str, email, oneOf, rateLimit } from '../http.js';
@@ -32,6 +32,7 @@ export function registerPublicRoutes(r) {
     const ai = await translationStatus();
     return {
       languages: LANGUAGES.map((l) => ({ ...l, live: live.has(l.code) })),
+      regions: REGIONS.map(([code, name]) => ({ code, name })),
       countries: COUNTRIES.map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name)),
       professions: PROFESSIONS,
       specialties, providers, plans,
@@ -264,6 +265,32 @@ export function registerPublicRoutes(r) {
       str(b.organisation, { max: 200 }), courseId, str(b.referenceUrl, { max: 500 }),
       str(b.description, { required: true, max: 6000, name: 'Description' }), b.goodFaith ? 1 : 0, ctx.user?.id ?? null);
     return { ok: true, reference: `REQ-${String(r2.lastInsertRowid).padStart(5, '0')}` };
+  });
+
+  // Whole-website translation: UI strings are machine-translated on demand and cached.
+  r.post('/api/i18n/translate', async (ctx) => {
+    rateLimit(`i18n:${ctx.ip}`, 120, 3600_000);
+    const b = await ctx.json();
+    if (!LANGUAGE_CODES.has(b.language) || b.language === 'en') throw bad('Choose a target language.');
+    const strings = (Array.isArray(b.strings) ? b.strings : []).slice(0, 80).map((x) => String(x).slice(0, 2000));
+    if (!strings.length) return { translations: [] };
+    const hash = (t) => crypto.createHash('sha1').update(t).digest('hex');
+    const out = strings.map((s) => get('SELECT text FROM ui_translation_cache WHERE language = ? AND source_hash = ?', b.language, hash(s))?.text ?? null);
+    const missing = strings.filter((_, i) => out[i] == null);
+    if (missing.length) {
+      let res;
+      try { res = await translateStrings({ strings: missing, target: b.language }); } catch (e) {
+        if (e instanceof ProviderNotConnectedError) throw new HttpError(503, 'Website translation is not connected on this server (ANTHROPIC_API_KEY missing).');
+        throw new HttpError(502, `Translation failed: ${e.message}`);
+      }
+      let k = 0;
+      strings.forEach((s, i) => {
+        if (out[i] != null) return;
+        out[i] = res[k++];
+        run('INSERT OR REPLACE INTO ui_translation_cache (language, source_hash, text) VALUES (?,?,?)', b.language, hash(s), out[i]);
+      });
+    }
+    return { translations: out };
   });
 
   r.post('/api/consent', async (ctx) => {

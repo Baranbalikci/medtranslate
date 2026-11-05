@@ -107,7 +107,7 @@ function start() {
   bar = document.createElement('div');
   bar.className = 'scroll-progress';
   bar.setAttribute('aria-hidden', 'true');
-  document.body.append(bar);
+  (document.getElementById('header') || document.body).append(bar); // part of the header, never floating
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll, { passive: true });
   document.addEventListener('pointermove', onPointer, { passive: true });

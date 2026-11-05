@@ -304,6 +304,13 @@ CREATE TABLE IF NOT EXISTS live_translation_cache (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (course_id, language, idx)
 );
+CREATE TABLE IF NOT EXISTS ui_translation_cache (
+  language TEXT NOT NULL,
+  source_hash TEXT NOT NULL,
+  text TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (language, source_hash)
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

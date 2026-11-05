@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { hashPassword } from './auth.js';
 import { SPECIALTIES, PROVIDERS, PLANS, COURSES, GLOSSARY } from './seed-data.js';
 import { AFRICAN_TRANSLATIONS } from './seed-africa.js';
+import { SHOWCASE_TRANSLATIONS } from './seed-showcase.js';
 
 export function seedIfEmpty() {
   const hasData = get('SELECT COUNT(*) AS n FROM specialties').n > 0;
@@ -85,7 +86,7 @@ function migrate() {
 // Adds the sample Kiswahili / Hausa / Amharic translations to demo courses (idempotent).
 function ensureDemoAfricanTranslations() {
   tx(() => {
-    for (const [slug, langs] of Object.entries(AFRICAN_TRANSLATIONS)) {
+    for (const [slug, langs] of [...Object.entries(AFRICAN_TRANSLATIONS), ...Object.entries(SHOWCASE_TRANSLATIONS)]) {
       const course = get('SELECT id FROM courses WHERE slug = ? AND is_demo = 1', slug);
       if (!course) continue;
       const lic = get('SELECT id, languages, is_demo FROM licenses WHERE course_id = ?', course.id);

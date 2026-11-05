@@ -1,35 +1,68 @@
 // Supported platform languages. A language listed here is only *offered* for a
 // course when a released translation exists AND the licence covers it.
 export const LANGUAGES = [
-  { code: 'en', name: 'English', native: 'English', bcp47: 'en-GB', dir: 'ltr' },
-  { code: 'de', name: 'German', native: 'Deutsch', bcp47: 'de-DE', dir: 'ltr' },
-  { code: 'fr', name: 'French', native: 'Français', bcp47: 'fr-FR', dir: 'ltr' },
-  { code: 'es', name: 'Spanish', native: 'Español', bcp47: 'es-ES', dir: 'ltr' },
-  { code: 'ar', name: 'Arabic', native: 'العربية', bcp47: 'ar-SA', dir: 'rtl' },
-  { code: 'tr', name: 'Turkish', native: 'Türkçe', bcp47: 'tr-TR', dir: 'ltr' },
-  { code: 'pt', name: 'Portuguese', native: 'Português', bcp47: 'pt-BR', dir: 'ltr' },
-  { code: 'zh', name: 'Chinese', native: '中文', bcp47: 'zh-CN', dir: 'ltr' },
-  { code: 'ja', name: 'Japanese', native: '日本語', bcp47: 'ja-JP', dir: 'ltr' },
-  { code: 'hi', name: 'Hindi', native: 'हिन्दी', bcp47: 'hi-IN', dir: 'ltr' },
-  { code: 'it', name: 'Italian', native: 'Italiano', bcp47: 'it-IT', dir: 'ltr' },
-  { code: 'pl', name: 'Polish', native: 'Polski', bcp47: 'pl-PL', dir: 'ltr' },
-  { code: 'nl', name: 'Dutch', native: 'Nederlands', bcp47: 'nl-NL', dir: 'ltr' },
-  { code: 'ru', name: 'Russian', native: 'Русский', bcp47: 'ru-RU', dir: 'ltr' },
-  { code: 'uk', name: 'Ukrainian', native: 'Українська', bcp47: 'uk-UA', dir: 'ltr' },
-  { code: 'ko', name: 'Korean', native: '한국어', bcp47: 'ko-KR', dir: 'ltr' },
-  { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', bcp47: 'id-ID', dir: 'ltr' },
-  { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', bcp47: 'vi-VN', dir: 'ltr' },
-  // Languages widely spoken in Africa (priority region). French, Arabic, Portuguese
-  // and English above also serve large parts of the continent.
+  // Europe
+  { code: 'en', name: 'English', native: 'English', bcp47: 'en-GB', dir: 'ltr', region: 'europe' },
+  { code: 'de', name: 'German', native: 'Deutsch', bcp47: 'de-DE', dir: 'ltr', region: 'europe' },
+  { code: 'fr', name: 'French', native: 'Français', bcp47: 'fr-FR', dir: 'ltr', region: 'europe' },
+  { code: 'es', name: 'Spanish', native: 'Español', bcp47: 'es-ES', dir: 'ltr', region: 'europe' },
+  { code: 'pt', name: 'Portuguese', native: 'Português', bcp47: 'pt-BR', dir: 'ltr', region: 'europe' },
+  { code: 'it', name: 'Italian', native: 'Italiano', bcp47: 'it-IT', dir: 'ltr', region: 'europe' },
+  { code: 'nl', name: 'Dutch', native: 'Nederlands', bcp47: 'nl-NL', dir: 'ltr', region: 'europe' },
+  { code: 'pl', name: 'Polish', native: 'Polski', bcp47: 'pl-PL', dir: 'ltr', region: 'europe' },
+  { code: 'ro', name: 'Romanian', native: 'Română', bcp47: 'ro-RO', dir: 'ltr', region: 'europe' },
+  { code: 'el', name: 'Greek', native: 'Ελληνικά', bcp47: 'el-GR', dir: 'ltr', region: 'europe' },
+  { code: 'ru', name: 'Russian', native: 'Русский', bcp47: 'ru-RU', dir: 'ltr', region: 'europe' },
+  { code: 'uk', name: 'Ukrainian', native: 'Українська', bcp47: 'uk-UA', dir: 'ltr', region: 'europe' },
+  // Africa (priority region; French, Arabic, Portuguese and English also serve large parts of it)
   { code: 'sw', name: 'Swahili', native: 'Kiswahili', bcp47: 'sw-KE', dir: 'ltr', region: 'africa' },
   { code: 'ha', name: 'Hausa', native: 'Hausa', bcp47: 'ha-NG', dir: 'ltr', region: 'africa' },
   { code: 'am', name: 'Amharic', native: 'አማርኛ', bcp47: 'am-ET', dir: 'ltr', region: 'africa' },
   { code: 'yo', name: 'Yoruba', native: 'Yorùbá', bcp47: 'yo-NG', dir: 'ltr', region: 'africa' },
   { code: 'ig', name: 'Igbo', native: 'Igbo', bcp47: 'ig-NG', dir: 'ltr', region: 'africa' },
   { code: 'zu', name: 'Zulu', native: 'isiZulu', bcp47: 'zu-ZA', dir: 'ltr', region: 'africa' },
+  { code: 'xh', name: 'Xhosa', native: 'isiXhosa', bcp47: 'xh-ZA', dir: 'ltr', region: 'africa' },
+  { code: 'af', name: 'Afrikaans', native: 'Afrikaans', bcp47: 'af-ZA', dir: 'ltr', region: 'africa' },
   { code: 'so', name: 'Somali', native: 'Soomaali', bcp47: 'so-SO', dir: 'ltr', region: 'africa' },
   { code: 'rw', name: 'Kinyarwanda', native: 'Ikinyarwanda', bcp47: 'rw-RW', dir: 'ltr', region: 'africa' },
   { code: 'om', name: 'Oromo', native: 'Afaan Oromoo', bcp47: 'om-ET', dir: 'ltr', region: 'africa' },
+  { code: 'ti', name: 'Tigrinya', native: 'ትግርኛ', bcp47: 'ti-ER', dir: 'ltr', region: 'africa' },
+  { code: 'ln', name: 'Lingala', native: 'Lingála', bcp47: 'ln-CD', dir: 'ltr', region: 'africa' },
+  { code: 'wo', name: 'Wolof', native: 'Wolof', bcp47: 'wo-SN', dir: 'ltr', region: 'africa' },
+  { code: 'ak', name: 'Akan (Twi)', native: 'Akan', bcp47: 'ak-GH', dir: 'ltr', region: 'africa' },
+  { code: 'sn', name: 'Shona', native: 'chiShona', bcp47: 'sn-ZW', dir: 'ltr', region: 'africa' },
+  { code: 'ny', name: 'Chichewa', native: 'Chichewa', bcp47: 'ny-MW', dir: 'ltr', region: 'africa' },
+  { code: 'mg', name: 'Malagasy', native: 'Malagasy', bcp47: 'mg-MG', dir: 'ltr', region: 'africa' },
+  { code: 'tn', name: 'Setswana', native: 'Setswana', bcp47: 'tn-BW', dir: 'ltr', region: 'africa' },
+  // Americas (Spanish and Portuguese above cover most of South America)
+  { code: 'qu', name: 'Quechua', native: 'Runa Simi', bcp47: 'qu-PE', dir: 'ltr', region: 'americas' },
+  { code: 'gn', name: 'Guarani', native: 'Avañeʼẽ', bcp47: 'gn-PY', dir: 'ltr', region: 'americas' },
+  { code: 'ay', name: 'Aymara', native: 'Aymar aru', bcp47: 'ay-BO', dir: 'ltr', region: 'americas' },
+  { code: 'ht', name: 'Haitian Creole', native: 'Kreyòl ayisyen', bcp47: 'ht-HT', dir: 'ltr', region: 'americas' },
+  // Middle East & North Africa
+  { code: 'ar', name: 'Arabic', native: 'العربية', bcp47: 'ar-SA', dir: 'rtl', region: 'mena' },
+  { code: 'tr', name: 'Turkish', native: 'Türkçe', bcp47: 'tr-TR', dir: 'ltr', region: 'mena' },
+  { code: 'fa', name: 'Persian', native: 'فارسی', bcp47: 'fa-IR', dir: 'rtl', region: 'mena' },
+  { code: 'ku', name: 'Kurdish', native: 'Kurdî', bcp47: 'ku-TR', dir: 'ltr', region: 'mena' },
+  // Asia
+  { code: 'zh', name: 'Chinese', native: '中文', bcp47: 'zh-CN', dir: 'ltr', region: 'asia' },
+  { code: 'ja', name: 'Japanese', native: '日本語', bcp47: 'ja-JP', dir: 'ltr', region: 'asia' },
+  { code: 'ko', name: 'Korean', native: '한국어', bcp47: 'ko-KR', dir: 'ltr', region: 'asia' },
+  { code: 'hi', name: 'Hindi', native: 'हिन्दी', bcp47: 'hi-IN', dir: 'ltr', region: 'asia' },
+  { code: 'bn', name: 'Bengali', native: 'বাংলা', bcp47: 'bn-BD', dir: 'ltr', region: 'asia' },
+  { code: 'ur', name: 'Urdu', native: 'اردو', bcp47: 'ur-PK', dir: 'rtl', region: 'asia' },
+  { code: 'ne', name: 'Nepali', native: 'नेपाली', bcp47: 'ne-NP', dir: 'ltr', region: 'asia' },
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்', bcp47: 'ta-IN', dir: 'ltr', region: 'asia' },
+  { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', bcp47: 'id-ID', dir: 'ltr', region: 'asia' },
+  { code: 'ms', name: 'Malay', native: 'Bahasa Melayu', bcp47: 'ms-MY', dir: 'ltr', region: 'asia' },
+  { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', bcp47: 'vi-VN', dir: 'ltr', region: 'asia' },
+  { code: 'th', name: 'Thai', native: 'ไทย', bcp47: 'th-TH', dir: 'ltr', region: 'asia' },
+  { code: 'tl', name: 'Filipino', native: 'Filipino', bcp47: 'fil-PH', dir: 'ltr', region: 'asia' },
+  { code: 'my', name: 'Burmese', native: 'မြန်မာ', bcp47: 'my-MM', dir: 'ltr', region: 'asia' },
+];
+
+export const REGIONS = [
+  ['africa', 'Africa'], ['americas', 'Americas'], ['mena', 'Middle East & North Africa'], ['asia', 'Asia'], ['europe', 'Europe'],
 ];
 
 export const LANGUAGE_CODES = new Set(LANGUAGES.map((l) => l.code));

@@ -23,10 +23,12 @@ export async function translateLive({ lang, source, from, onCues, signal, course
     e.code = 'unavailable'; throw e;
   }
   const order = [...source.filter((q) => q.idx >= from), ...source.filter((q) => q.idx < from)];
-  const chunk = 8;
-  for (let i = 0; i < order.length; i += chunk) {
+  // First the sentences at the playhead with the fastest model (subtitles appear within seconds),
+  // then the rest of the lecture with the default model for higher quality.
+  const parts = [order.slice(0, 3), ...Array.from({ length: Math.ceil(Math.max(0, order.length - 3) / 8) }, (_, k) => order.slice(3 + k * 8, 11 + k * 8))];
+  for (const [n, part] of parts.entries()) {
     if (signal.aborted) return;
-    const part = order.slice(i, i + chunk);
+    if (!part.length) continue;
     const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
     let pending = '';
     const eat = (s) => {
@@ -41,7 +43,7 @@ export async function translateLive({ lang, source, from, onCues, signal, course
       if (got.length) onCues(got);
     };
     try {
-      await sample(prompt, { signal, onText: ({ delta }) => eat(delta) });
+      await sample(prompt, { signal, modelTier: n === 0 ? 'quick' : 'default', onText: ({ delta }) => eat(delta) });
       eat('\n');
     } catch (e) {
       if (e?.code === 'cancelled') return;

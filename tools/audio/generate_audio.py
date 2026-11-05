@@ -36,13 +36,11 @@ PIPER = {  # language -> {speaker: (voice file, pitch factor)}
     "pt": {"Host": ("pt-br-edresson-low", 1.12), "Expert": ("pt-br-edresson-low", 1.0)},
     "zh": {"Host": ("zh-cn-huayan-x-low", 1.0), "Expert": ("zh-cn-huayan-x-low", 0.86)},
 }
-ESPEAK = {  # language -> {speaker: espeak voice}
-    "ar": {"Host": "ar+f3", "Expert": "ar+m3"},
-    "tr": {"Host": "tr+f3", "Expert": "tr+m3"},
-    "hi": {"Host": "hi+f3", "Expert": "hi+m3"},
-    "sw": {"Host": "sw+f3", "Expert": "sw+m3"},
-    "am": {"Host": "am+f3", "Expert": "am+m3"},
-}
+# eSpeak NG voices: a female variant for the host, a male one for the expert.
+ESPEAK_LANGS = ["ar", "tr", "hi", "sw", "am", "it", "nl", "pl", "ro", "el", "ru", "uk", "af", "om", "tn", "ti",
+                "qu", "gn", "ht", "fa", "ku", "ko", "bn", "ur", "ne", "ta", "id", "ms", "vi", "th"]
+ESPEAK_CODE = {}
+ESPEAK = {l: {"Host": f"{ESPEAK_CODE.get(l, l)}+f3", "Expert": f"{ESPEAK_CODE.get(l, l)}+m3"} for l in ESPEAK_LANGS}
 
 
 def ffmpeg_pcm(pcm, sr, filters):
@@ -76,7 +74,15 @@ class Engines:
                 import espeak  # noqa: E402
                 self.espeak = espeak
             voice = ESPEAK[lang].get(speaker) or next(iter(ESPEAK[lang].values()))
-            pcm, sr = self.espeak.synth(text, voice, rate_wpm=160)
+            try:
+                pcm, sr = self.espeak.synth(text, voice, rate_wpm=160)
+            except ValueError:
+                try:
+                    pcm, sr = self.espeak.synth(text, voice.split("+")[0], rate_wpm=160)
+                except ValueError:
+                    return None
+            if len(pcm) < 2000:  # engine produced (almost) nothing — treat as unsupported
+                return None
             return pcm, sr, 1.0
         return None
 
@@ -143,12 +149,15 @@ def main():
     ap.add_argument("--db", default=os.path.join(ROOT, "data", "medtranslate.db"))
     ap.add_argument("--voices", default=os.path.join(os.path.dirname(__file__), "voices"))
     ap.add_argument("--only", nargs="*", help="limit to these course slugs")
+    ap.add_argument("--langs", nargs="*", help="limit dubbed languages (and skip the original track)")
     args = ap.parse_args()
 
     db = sqlite3.connect(args.db)
     db.row_factory = sqlite3.Row
     engines = Engines(args.voices)
     manifest = {}
+    mpath = os.path.join(ROOT, "media", "audio", "manifest.json")
+    previous = json.load(open(mpath)) if os.path.exists(mpath) else {}
     courses = db.execute("SELECT id, slug, duration_sec, original_language, media_file FROM courses WHERE is_demo = 1").fetchall()
     for c in courses:
         if args.only and c["slug"] not in args.only:
@@ -156,19 +165,27 @@ def main():
         cues = [dict(r) | {"start": r["start_sec"], "end": r["end_sec"]} for r in
                 db.execute("SELECT idx, start_sec, end_sec, speaker, text FROM cues WHERE course_id = ? ORDER BY idx", (c["id"],))]
         entry = manifest.setdefault(c["slug"], {"original": False, "languages": []})
+        if args.langs:  # incremental run: keep what an earlier run produced
+            prev = previous.get(c["slug"], {})
+            entry.update(original=prev.get("original", False), languages=list(prev.get("languages", [])))
         total = c["duration_sec"]
-        pcm = render_track(engines, c["original_language"], cues, [q["text"] for q in cues], total)
+        pcm = None if args.langs else render_track(engines, c["original_language"], cues, [q["text"] for q in cues], total)
+        if args.langs:
+            entry["original"] = True if os.path.exists(os.path.join(ROOT, "media", c["media_file"])) and entry.get("original", True) else False
         if pcm:
             mux_original(os.path.join(ROOT, "media", c["media_file"]), pcm)
             entry["original"] = True
         langs = db.execute("SELECT id, language FROM translations WHERE course_id = ? AND status = 'released'", (c["id"],)).fetchall()
         for t in langs:
+            if args.langs and t["language"] not in args.langs:
+                continue
             texts = {r["idx"]: r["text"] for r in db.execute("SELECT idx, text FROM translation_cues WHERE translation_id = ?", (t["id"],))}
             pcm = render_track(engines, t["language"], cues, [texts.get(q["idx"], "") for q in cues], total)
             if pcm is None:
                 continue
             encode(pcm, os.path.join(ROOT, "media", "audio", c["slug"], f"{t['language']}.m4a"))
-            entry["languages"].append(t["language"])
+            if t["language"] not in entry["languages"]:
+                entry["languages"].append(t["language"])
         print(f"✓ {c['slug']}: original={'yes' if entry['original'] else 'no'} dubbed={','.join(sorted(entry['languages'])) or '-'}", flush=True)
     path = os.path.join(ROOT, "media", "audio", "manifest.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)

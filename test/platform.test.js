@@ -46,7 +46,7 @@ test('catalogue only lists published courses and released, licensed languages', 
   assert.ok(data.total >= 9);
   assert.ok(!data.courses.some((x) => x.slug === 'pediatric-fever-without-source'), 'draft must not be listed');
   const stroke = data.courses.find((x) => x.slug === 'stroke-first-60-minutes');
-  assert.equal(stroke.languages.length, 13);
+  assert.equal(stroke.languages.length, 45, 'showcase course: original + 44 sample translations');
   assert.ok(['sw', 'ha', 'am'].every((l) => stroke.languages.includes(l)), 'African sample languages are released');
   assert.equal(stroke.accreditation.status, 'not_accredited');
   const de = await c('GET', '/api/courses?language=tr');
@@ -195,4 +195,19 @@ test('live AI translation: permission gate and honest "not connected" state', as
   assert.equal(r.status, 503, 'without ANTHROPIC_API_KEY the server must not fake a translation');
   const bad = await c('POST', '/api/courses/stroke-first-60-minutes/live-translate', { language: 'en' });
   assert.equal(bad.status, 400);
+});
+
+test('website translation endpoint is honest when AI is not connected', async () => {
+  const c = client();
+  const r = await c('POST', '/api/i18n/translate', { language: 'sw', strings: ['Explore Courses'] });
+  assert.equal(r.status, 503);
+  assert.equal((await c('POST', '/api/i18n/translate', { language: 'xx', strings: ['a'] })).status, 400);
+});
+
+test('meta lists 53 languages in five regions incl. Africa and the Americas', async () => {
+  const { data } = await client()('GET', '/api/meta');
+  assert.equal(data.languages.length, 53);
+  assert.deepEqual(data.regions.map((r) => r.code), ['africa', 'americas', 'mena', 'asia', 'europe']);
+  assert.ok(data.languages.filter((l) => l.region === 'africa').length >= 15);
+  assert.ok(['qu', 'gn', 'ay', 'ht'].every((c) => data.languages.some((l) => l.code === c)));
 });
