@@ -218,6 +218,7 @@ export default function adminView() {
           <label class="field"><span>Term start</span><input type="date" name="term_start" value="${L?.term_start || ''}" ${dis}></label>
           <label class="field"><span>Term end</span><input type="date" name="term_end" value="${L?.term_end || ''}" ${dis}></label>
           <div class="field full"><span class="field-label">Granted rights</span><div class="rights">${RIGHTS.map(([k, l]) => html`<label class="check"><input type="checkbox" name="${k}" ${L?.[k] ? 'checked' : ''} ${dis}> <span>${l}</span></label>`)}</div></div>
+          <div class="field full"><label class="check"><input type="checkbox" name="allow_live_ai" ${L?.allow_live_ai ? 'checked' : ''} ${dis}> <span><b>Allow live AI subtitles</b> — viewers may request on-the-fly machine translation into any language. Shown as unreviewed; requires translation and subtitle rights.</span></label></div>
           <label class="field"><span>Territories <small>(ISO codes, comma-separated, or * )</small></span><input name="territories" value="${(L?.territories || []).join(', ')}" ${dis}></label>
           <label class="field"><span>Licensed languages <small>(codes, comma-separated, or * )</small></span><input name="languages" value="${(L?.languages || []).join(', ')}" ${dis}></label>
           <label class="field"><span>Revenue share</span><input name="revenue_share" value="${L?.revenue_share || ''}" ${dis}></label>

@@ -1,4 +1,5 @@
-import { curPath } from './nav.js';
+import { curPath, ask } from './nav.js';
+import { translateLive } from './live.js';
 // MedTranslate player
 // ─────────────────────────────────────────────────────────────────────────────
 // • One <video> element for the whole session. Switching subtitle or audio
@@ -19,12 +20,12 @@ import { prefs, state, langInfo } from './store.js';
 const CPS = { en: 14, de: 13, fr: 14, es: 15, it: 14, pt: 14, tr: 13, nl: 13, pl: 12, ru: 12, uk: 12, ar: 11, hi: 11, zh: 5, ja: 7, ko: 6, id: 13, vi: 12 };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesChange, onProgress, onError }) {
+export function createPlayer(root, { slug, title, chapters = [], liveAi = null, onTime, onCuesChange, onProgress, onError }) {
   const S = {
     data: null, cues: new Map(), subLang: null, audioLang: null, subsOn: true,
     size: prefs.get('subSize', 'm'), position: prefs.get('subPos', 'bottom'), bg: prefs.get('subBg', 0.75),
     rate: 1, spokenIdx: -1, lastTick: 0, watched: 0, lastReport: 0, destroyed: false, voices: [], idleTimer: null,
-    lastCueIdx: -2, audioEl: null, previewHit: false,
+    lastCueIdx: -2, audioEl: null, previewHit: false, live: null, liveAck: false,
   };
 
   root.innerHTML = String(html`
@@ -69,7 +70,9 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
 
   const flash = (msg) => { const t = q('.p-toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
   const duration = () => (isFinite(video.duration) && video.duration > 0 ? video.duration : S.data?.durationSec || 0);
-  const track = (lang) => S.data.tracks.find((t) => t.language === lang);
+  const liveTrack = () => S.live && { language: S.live.lang, original: false, live: true, subtitles: true,
+    audio: tts && voicesFor(S.live.lang).length ? 'browser_tts' : 'none', aiGenerated: true, review: 'live_unreviewed' };
+  const track = (lang) => S.data.tracks.find((t) => t.language === lang) || (S.live?.lang === lang ? liveTrack() : undefined);
 
   // ── data loading ─────────────────────────────────────────────────────────
   async function loadCues(lang) {
@@ -148,14 +151,20 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
   function applyAudio({ silent }) {
     const t = track(S.audioLang);
     stopSpeech();
+    S.audioToken = (S.audioToken || 0) + 1;
     S.audioEl?.pause(); S.audioEl?.remove(); S.audioEl = null;
     const mode = t.original ? (S.data.mediaHasAudio ? 'original' : 'browser_tts') : t.audio;
     S.audioMode = mode;
     if (mode === 'original') { video.muted = false; }
     else if (mode === 'file' && t.audioUrl) {
       video.muted = true;
-      const a = new Audio(t.audioUrl); a.preload = 'auto'; a.volume = video.volume; a.playbackRate = video.playbackRate;
-      S.audioEl = a; a.currentTime = video.currentTime; if (!video.paused) a.play().catch(() => {});
+      const token = (S.audioToken = (S.audioToken || 0) + 1);
+      (window.MT_RESOLVE_MEDIA ? window.MT_RESOLVE_MEDIA(t.audioUrl) : Promise.resolve(t.audioUrl)).then((url) => {
+        if (token !== S.audioToken || S.destroyed) return;
+        const a = new Audio(url); a.preload = 'auto'; a.volume = video.volume; a.playbackRate = video.playbackRate;
+        a.muted = video.dataset.userMuted === '1';
+        S.audioEl = a; a.currentTime = video.currentTime; if (!video.paused) a.play().catch(() => {});
+      });
     } else if (mode === 'browser_tts') {
       video.muted = true;
       loadCues(S.audioLang).catch(() => {});
@@ -165,7 +174,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
       S.spokenIdx = cueIndexAt(cuesNow(S.audioLang), video.currentTime, 0.6);
     } else { video.muted = true; }
     updateLangTag();
-    if (!silent) flash(`Audio: ${langInfo(S.audioLang)?.native}${t.original ? ' (original)' : ' (AI voice)'}`);
+    if (!silent) flash(`Audio: ${langInfo(S.audioLang)?.native}${t.original ? ' (original)' : t.live ? ' (live AI, device voice)' : ' (AI voice)'}`);
   }
 
   function updateLangTag() {
@@ -175,7 +184,10 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     tag.hidden = !ai;
     if (ai) {
       const rev = (sub && !sub.original ? sub : aud).review;
-      tag.innerHTML = `${icon('sparkles', 13)} AI translation · ${rev === 'medically_reviewed' ? 'medically reviewed' : rev === 'demo_unreviewed' ? 'demo, not medically reviewed' : 'not reviewed'}`;
+      if (rev === 'live_unreviewed') {
+        const n = S.live.done.size, total = S.live.total;
+        tag.innerHTML = `${icon('zap', 13)} LIVE AI translation · not reviewed${S.live.status === 'translating' ? ` · translating ${n}/${total}` : S.live.status === 'error' ? ' · interrupted' : ''}`;
+      } else tag.innerHTML = `${icon('sparkles', 13)} AI translation · ${rev === 'medically_reviewed' ? 'medically reviewed' : rev === 'demo_unreviewed' ? 'demo, not medically reviewed' : 'not reviewed'}`;
     }
     q('.p-tag-demo').hidden = !S.data.tracks.length;
   }
@@ -195,6 +207,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     S.lastCueIdx = idx;
     if (idx < 0) { subsEl.innerHTML = ''; return; }
     const c = cues[idx]; const info = langInfo(S.subLang);
+    if (!c.text) { subsEl.innerHTML = S.live?.lang === S.subLang ? '<div><span class="cue cue-pending">· · ·</span></div>' : ''; return; }
     const speakers = new Set(cues.map((x) => x.speaker).filter(Boolean));
     subsEl.innerHTML = `<div dir="${info?.dir || 'ltr'}" lang="${esc(S.subLang)}">${speakers.size > 1 && c.speaker ? `<span class="speaker">${esc(c.speaker)}</span>` : ''}<span class="cue" style="background:rgba(5,15,34,${S.bg})">${esc(c.text)}</span></div>`;
   }
@@ -218,6 +231,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
   function speakCue(cues, i, remainingFraction = 1) {
     if (!tts) return;
     const c = cues[i]; const lang = S.audioLang;
+    if (!c.text) return;
     const voices = voicesFor(lang);
     if (!voices.length) return;
     const speakers = [...new Set(cues.map((x) => x.speaker || ''))];
@@ -298,20 +312,70 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     el.append(box);
   }
 
+  // ── live AI translation ─────────────────────────────────────────────────
+  async function startLive(lang) {
+    if (!lang) return;
+    if (!S.liveAck) {
+      const ok = await ask('Live AI translation creates subtitles in real time with a machine-translation model. They are not reviewed by medical experts and may contain errors. The original-language version is authoritative.', { confirmLabel: 'Start live translation' });
+      if (!ok) return;
+      S.liveAck = true;
+    }
+    S.live?.ctl.abort();
+    const original = S.data.tracks[0].language;
+    let source;
+    try { source = (await loadCues(original)).map((c, idx) => ({ ...c, idx })); } catch { flash('Could not load the transcript.'); return; }
+    const ctl = new AbortController();
+    S.live = { lang, ctl, texts: new Map(), done: new Set(), total: source.length, status: 'translating', error: null };
+    const rebuild = () => {
+      const list = source.map((c) => ({ start: c.start, end: c.end, speaker: c.speaker, text: S.live.texts.get(c.idx) || '' }));
+      S.cues.set(lang, list);
+      if (S.subLang === lang) { S.lastCueIdx = -2; renderSubs(true); onCuesChange?.(lang, list, liveTrack()); }
+      updateLangTag();
+    };
+    rebuild();
+    S.subsOn = true; applySubStyle();
+    S.subLang = lang;
+    q('.p-lang-btn .code').textContent = lang.toUpperCase();
+    rebuild(); renderMenus(); toggleMenu(null, false);
+    flash(`Live AI translation: ${langInfo(lang)?.native || lang}`);
+    if (video.paused && video.currentTime < 0.5) video.play().catch(() => {});
+    const now = cueIndexAt(S.cues.get(lang), video.currentTime);
+    const from = now >= 0 ? now : Math.max(0, source.findIndex((c) => c.start > video.currentTime));
+    try {
+      await translateLive({ slug, lang, source, from, signal: ctl.signal, courseTitle: title,
+        onCues(items) { if (S.live?.ctl !== ctl) return; for (const it of items) { S.live.texts.set(it.idx, it.text); S.live.done.add(it.idx); } rebuild(); } });
+      if (S.live?.ctl === ctl) { S.live.status = 'ready'; updateLangTag(); renderMenus(); }
+    } catch (e) {
+      if (S.live?.ctl !== ctl) return;
+      S.live.status = 'error'; S.live.error = e.message || 'Live translation failed.';
+      updateLangTag(); renderMenus(); flash(S.live.error);
+    }
+  }
+
   // ── menus ───────────────────────────────────────────────────────────────
   function renderMenus() {
     if (!S.data) return;
-    const tr = S.data.tracks;
+    const tr = S.live ? [...S.data.tracks, liveTrack()] : S.data.tracks;
     const opt = (checked, label, attrs, meta = '') => `<button class="opt" role="menuitemradio" aria-checked="${checked}" ${attrs}><span class="tick">${checked ? icon('check', 16) : ''}</span><span>${label}</span><span class="meta">${meta}</span></button>`;
-    const reviewMini = (t) => t.original ? '<span class="mini">ORIGINAL</span>' : `<span class="mini ai">AI</span>`;
+    const reviewMini = (t) => t.original ? '<span class="mini">ORIGINAL</span>' : t.live ? '<span class="mini live">LIVE AI</span>' : `<span class="mini ai">AI</span>`;
+    const have = new Set(tr.map((t) => t.language));
+    const langs = state.meta?.languages || [];
+    const optsFor = (list) => list.filter((l) => !have.has(l.code)).map((l) => `<option value="${l.code}">${esc(l.native)} · ${esc(l.name)}</option>`).join('');
+    const liveBlock = liveAi?.allowed ? `
+      <h4>Live AI translation · any language</h4>
+      <div class="live-row"><select data-live-lang aria-label="Language for live translation">
+        <optgroup label="Africa">${optsFor(langs.filter((l) => l.region === 'africa'))}</optgroup>
+        <optgroup label="More languages">${optsFor(langs.filter((l) => l.region !== 'africa'))}</optgroup>
+      </select><button class="live-go" data-live-start>${icon('zap', 14)} Translate live</button></div>
+      <p class="note">Translates what is said, starting where you are now, while the video plays. Unreviewed machine translation — may contain errors.${S.live?.error ? ` <b style="color:#FCA5A5">${esc(S.live.error)}</b>` : ''}</p>` : '';
     langMenu.innerHTML = `
       <h4>Audio</h4>
-      ${tr.filter((t) => t.audio !== 'none').map((t) => opt(S.audioLang === t.language, esc(langInfo(t.language)?.native || t.language) + (t.original ? '' : ' <span style="color:#8FA1BA">· AI voice</span>'), `data-audio="${t.language}"`, reviewMini(t))).join('')}
-      ${S.audioMode === 'browser_tts' ? `<p class="note">AI voices are synthesised on your device (demo). Quality depends on the voices installed in your browser/OS. Production uses server-generated neural audio tracks.</p>` : ''}
+      ${tr.filter((t) => t.audio !== 'none').map((t) => opt(S.audioLang === t.language, esc(langInfo(t.language)?.native || t.language) + (t.original ? '' : ` <span style="color:#8FA1BA">· ${t.audio === 'file' ? 'AI voice' : 'device voice'}</span>`), `data-audio="${t.language}"`, reviewMini(t))).join('')}
+      ${S.audioMode === 'browser_tts' ? `<p class="note">This voice is synthesised by your device. If you hear nothing, your browser has no voice for this language — subtitles stay on.</p>` : S.audioMode === 'file' ? `<p class="note">AI voice track, time-synchronised to the original speakers.</p>` : ''}
       <h4>Subtitles</h4>
       ${opt(!S.subsOn, 'Off', 'data-sub="off"')}
       ${tr.map((t) => opt(S.subsOn && S.subLang === t.language, esc(langInfo(t.language)?.native || t.language), `data-sub="${t.language}"`, reviewMini(t))).join('')}
-      <p class="note">AI translations preserve the original content but may contain errors. Check the review status shown for each course.</p>`;
+      <p class="note">AI translations preserve the original content but may contain errors. Check the review status shown for each course.</p>${liveBlock}`;
     const seg = (name, cur, items) => `<div class="seg" role="group">${items.map(([v, l]) => `<button data-set="${name}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join('')}</div>`;
     setMenu.innerHTML = `
       <h4>Playback speed</h4>${seg('rate', S.rate, [[0.75, '0.75×'], [1, '1×'], [1.25, '1.25×'], [1.5, '1.5×'], [2, '2×']])}
@@ -346,7 +410,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
   }
 
   el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-a],[data-sub],[data-audio],[data-set]');
+    const b = e.target.closest('[data-a],[data-sub],[data-audio],[data-set],[data-live-start]');
     if (!b) {
       if (e.target === video || e.target.closest('.p-overlay') || e.target.closest('.p-subs')) {
         // First tap on a playing, idle player (touch) only reveals the controls.
@@ -368,6 +432,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
       else { S.subsOn = true; applySubStyle(); setSubtitleLang(b.dataset.sub); }
       prefs.set('subsOn', S.subsOn);
     } else if (b.dataset.audio) setAudioLang(b.dataset.audio);
+    else if (b.hasAttribute('data-live-start')) startLive(langMenu.querySelector('[data-live-lang]').value);
     else if (b.dataset.set) {
       const k = b.dataset.set; const v = b.dataset.v;
       if (k === 'rate') { S.rate = Number(v); video.playbackRate = S.rate; if (S.audioEl) S.audioEl.playbackRate = S.rate; flash(`Speed ${v}×`); }
@@ -461,7 +526,7 @@ export function createPlayer(root, { slug, title, chapters = [], onTime, onCuesC
     destroy() {
       S.destroyed = true;
       if (S.data && video.currentTime > 0) report();
-      stopSpeech(); S.audioEl?.pause();
+      stopSpeech(); S.audioEl?.pause(); S.live?.ctl.abort();
       video.pause(); video.removeAttribute('src'); video.load();
       document.removeEventListener('fullscreenchange', onFs);
       document.removeEventListener('visibilitychange', onHide);

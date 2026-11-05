@@ -1,11 +1,11 @@
-import crypto from 'node:crypto';
 import { get, all, run, parseJson, audit } from '../db.js';
 import { config } from '../config.js';
 import { LANGUAGES, COUNTRIES, PROFESSIONS, LANGUAGE_CODES } from '../languages.js';
 import { loadCourseBySlug, loadPublishedCourses, courseCard, courseDetail } from '../catalog.js';
 import { licenseFor, territoryAllows, entitlement, accreditationFor, availableTracks } from '../compliance.js';
 import { signMediaPath } from '../services/media.js';
-import { translationStatus } from '../services/translation.js';
+import { translationStatus, translateCues, ProviderNotConnectedError } from '../services/translation.js';
+import crypto from 'node:crypto';
 import { paymentMode } from '../services/payments.js';
 import { HttpError, notFound, bad, str, email, oneOf, rateLimit } from '../http.js';
 
@@ -32,7 +32,7 @@ export function registerPublicRoutes(r) {
     const ai = await translationStatus();
     return {
       languages: LANGUAGES.map((l) => ({ ...l, live: live.has(l.code) })),
-      countries: COUNTRIES.map(([code, name]) => ({ code, name })),
+      countries: COUNTRIES.map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name)),
       professions: PROFESSIONS,
       specialties, providers, plans,
       integrations: {
@@ -144,6 +144,49 @@ export function registerPublicRoutes(r) {
     };
   });
 
+  // Live AI subtitles: translate the transcript into any platform language on demand,
+  // starting at the viewer's playhead. Unreviewed machine translation, clearly labelled.
+  // Allowed only where the licence permits translation, subtitles and live AI use.
+  r.post('/api/courses/:slug/live-translate', async (ctx) => {
+    rateLimit(`live:${ctx.user?.id || ctx.ip}`, 60, 3600_000);
+    const c = publishedCourseOr404(ctx.params.slug);
+    const b = await ctx.json();
+    if (!LANGUAGE_CODES.has(b.language) || b.language === c.original_language) throw bad('Choose a target language.');
+    const license = licenseFor(c.id);
+    if (!territoryAllows(license, ctx.user?.country)) throw new HttpError(451, 'Not licensed for your country.');
+    if (!liveAllowed(license)) throw new HttpError(403, 'Live AI translation is not permitted for this course.');
+    const ent = entitlement(ctx.user, c);
+    const limit = ent.full ? Infinity : Math.min(Math.round(c.duration_sec * 0.3), 120);
+    const from = Math.max(0, Number(b.from) || 0);
+    const count = Math.min(20, Math.max(1, Number(b.count) || 8));
+    const cues = all('SELECT idx, start_sec, end_sec, speaker, text FROM cues WHERE course_id = ? AND idx >= ? ORDER BY idx LIMIT ?', c.id, from, count)
+      .filter((q) => q.start_sec < limit);
+    if (!cues.length) return { cues: [], done: true };
+    const hash = (t) => crypto.createHash('sha1').update(t).digest('hex').slice(0, 16);
+    const cached = new Map(all('SELECT idx, text, source_hash FROM live_translation_cache WHERE course_id = ? AND language = ?', c.id, b.language)
+      .map((x) => [x.idx, x]));
+    const missing = cues.filter((q) => cached.get(q.idx)?.source_hash !== hash(q.text));
+    if (missing.length) {
+      let out;
+      try {
+        out = await translateCues({ cues: missing.map((q) => ({ text: q.text, speaker: q.speaker })), source: c.original_language, target: b.language, courseTitle: c.title });
+      } catch (e) {
+        if (e instanceof ProviderNotConnectedError) throw new HttpError(503, 'Live AI translation is not connected on this server (ANTHROPIC_API_KEY missing).');
+        throw new HttpError(502, `Live translation failed: ${e.message}`);
+      }
+      missing.forEach((q, i) => {
+        run(`INSERT INTO live_translation_cache (course_id, language, idx, source_hash, text, model) VALUES (?,?,?,?,?,?)
+             ON CONFLICT(course_id, language, idx) DO UPDATE SET text = excluded.text, source_hash = excluded.source_hash, model = excluded.model, created_at = datetime('now')`,
+          c.id, b.language, q.idx, hash(q.text), out.texts[i], out.model);
+        cached.set(q.idx, { text: out.texts[i] });
+      });
+    }
+    return {
+      language: b.language, review: 'live_unreviewed', done: cues.length < count,
+      cues: cues.map((q) => ({ idx: q.idx, start: q.start_sec, end: q.end_sec, speaker: q.speaker, text: cached.get(q.idx).text })),
+    };
+  });
+
   r.post('/api/courses/:slug/progress', async (ctx) => {
     if (!ctx.user) return { saved: false };
     const c = publishedCourseOr404(ctx.params.slug);
@@ -234,6 +277,8 @@ export function registerPublicRoutes(r) {
 
   r.get('/api/legal/operator', () => ({ operator: config.operator, policyVersion: config.policyVersion }));
 }
+
+export const liveAllowed = (license) => !!(license?.allow_live_ai && license.right_translate && license.right_subtitle);
 
 export function issueCertificate(user, course, language) {
   const existing = get('SELECT id FROM certificates WHERE user_id = ? AND course_id = ?', user.id, course.id);

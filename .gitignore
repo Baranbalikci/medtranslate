@@ -5,3 +5,5 @@ data/
 *.db-shm
 .env
 dist/
+tools/audio/voices/
+.venv/

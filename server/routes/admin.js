@@ -190,7 +190,8 @@ export function registerAdminRoutes(r) {
       run(`INSERT INTO licenses (licensor, contract_ref, ${RIGHTS.map((x) => x.key).join(', ')}, territories, languages, term_start, term_end, revenue_share, document_ref, notes, course_id)
            VALUES (${Array(values.length + 1).fill('?').join(',')})`, ...values, c.id);
     }
-    audit(ctx.user.id, 'license.updated', 'course', c.id, { rights, territories, languages });
+    run('UPDATE licenses SET allow_live_ai = ? WHERE course_id = ?', b.allow_live_ai ? 1 : 0, c.id);
+    audit(ctx.user.id, 'license.updated', 'course', c.id, { rights, territories, languages, allowLiveAi: !!b.allow_live_ai });
     if (c.status === 'published' && publishBlockers(c.id).length) {
       run("UPDATE courses SET status = 'suspended' WHERE id = ?", c.id);
       audit(ctx.user.id, 'course.auto_suspended', 'course', c.id, { reason: 'licence no longer sufficient' });

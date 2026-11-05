@@ -1,3 +1,4 @@
+import { initFx } from './fx.js';
 import { curPath, curSearch, setUrl, STATIC } from './nav.js';
 import { html, icon, $, $$, esc, toast } from './ui.js';
 import { state, loadSession, onChange, saveConsent } from './store.js';
@@ -75,7 +76,7 @@ async function render({ keepScroll = false } = {}) {
     if (view.mount) cleanup = view.mount(main, ctx) || null;
     const h1 = main.querySelector('h1');
     if (h1 && !keepScroll) { h1.setAttribute('tabindex', '-1'); h1.focus({ preventScroll: true }); }
-    observeReveal(main);
+    initFx(main);
   } catch (err) {
     if (token !== navToken) return;
     console.error(err);
@@ -88,11 +89,6 @@ async function render({ keepScroll = false } = {}) {
   }
 }
 
-// ── reveal-on-scroll (respects reduced motion via CSS) ──────────────────────
-const io = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
-  for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-}, { rootMargin: '0px 0px -8% 0px' }) : null;
-function observeReveal(root) { $$('.reveal', root).forEach((el) => (io ? io.observe(el) : el.classList.add('in'))); }
 
 // ── header / footer ─────────────────────────────────────────────────────────
 const NAV = [

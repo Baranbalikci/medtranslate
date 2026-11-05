@@ -42,6 +42,7 @@ export function courseDetail(c, user) {
     speakers: [...new Set(cues.map((q) => q.speaker).filter(Boolean))],
     tracks: availableTracks(c, license),
     entitlement: entitlement(user, c),
+    liveAi: { allowed: !!(license?.allow_live_ai && license.right_translate && license.right_subtitle) },
     licenseSummary: license ? { licensor: license.licensor, isDemo: !!license.is_demo, aiAudioPermitted: !!license.right_ai_audio } : null,
   };
 }

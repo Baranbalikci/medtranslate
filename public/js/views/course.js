@@ -3,7 +3,7 @@ import { state, langInfo } from '../store.js';
 import { get, post } from '../api.js';
 import { createPlayer } from '../player.js';
 
-const reviewLabel = { source: 'Original', medically_reviewed: 'AI · medically reviewed', demo_unreviewed: 'AI · demo, not reviewed', unreviewed: 'AI · not reviewed' };
+const reviewLabel = { source: 'Original', medically_reviewed: 'AI · medically reviewed', demo_unreviewed: 'AI · demo, not reviewed', unreviewed: 'AI · not reviewed', live_unreviewed: 'LIVE AI · not reviewed' };
 
 export default function courseView() {
   let course = null; let player = null;
@@ -53,6 +53,7 @@ export default function courseView() {
                   ${c.tracks.map((t) => html`<dt>${langInfo(t.language)?.native || t.language}${t.audio !== 'none' ? html` <span title="Audio available" style="color:var(--cyan-600)">${icon('volume', 13)}</span>` : ''}</dt>
                     <dd><span class="badge ${t.original ? 'badge-neutral' : t.review === 'medically_reviewed' ? 'badge-ok' : 'badge-warn'}">${reviewLabel[t.review]}</span></dd>`)}
                 </dl>
+                ${c.liveAi?.allowed ? html`<div class="live-hint">${icon('zap', 16)}<span><b>Any other language, live.</b> In the player, open ${icon('globe', 13)} → “Live AI translation” — e.g. Kiswahili, Hausa, Yorùbá, isiZulu, Amharic, Somali.</span></div>` : ''}
                 <div class="ai-note warn" style="margin-top:14px">${icon('sparkles', 16)}<span>Translations and AI voices are machine-generated (EU AI Act transparency). ${c.isDemo ? 'Demo translations have not been reviewed by a medical professional.' : ''} The original ${langInfo(original.language)?.name} version is authoritative. <a href="/legal/ki-transparenz">Learn more</a></span></div>
               </div>
               <div class="side-card">
@@ -111,7 +112,7 @@ export default function courseView() {
       let currentIdx = -1;
       const transcript = $('#transcript', root);
       player = createPlayer($('#player-host', root), {
-        slug: c.slug, title: c.title, chapters: c.chapters,
+        slug: c.slug, title: c.title, chapters: c.chapters, liveAi: c.liveAi,
         onCuesChange(lang, list, track) {
           cues = list || [];
           const info = langInfo(lang);

@@ -46,7 +46,8 @@ test('catalogue only lists published courses and released, licensed languages', 
   assert.ok(data.total >= 9);
   assert.ok(!data.courses.some((x) => x.slug === 'pediatric-fever-without-source'), 'draft must not be listed');
   const stroke = data.courses.find((x) => x.slug === 'stroke-first-60-minutes');
-  assert.equal(stroke.languages.length, 10);
+  assert.equal(stroke.languages.length, 13);
+  assert.ok(['sw', 'ha', 'am'].every((l) => stroke.languages.includes(l)), 'African sample languages are released');
   assert.equal(stroke.accreditation.status, 'not_accredited');
   const de = await c('GET', '/api/courses?language=tr');
   assert.ok(de.data.courses.every((x) => x.languages.includes('tr')));
@@ -174,4 +175,24 @@ test('media requires a valid signature', async () => {
   const res = await fetch(BASE + data.mediaUrl, { headers: { Range: 'bytes=0-99' } });
   assert.equal(res.status, 206);
   assert.equal((await res.arrayBuffer()).byteLength, 100);
+});
+
+test('dubbed audio tracks are served as signed files; original video has sound', async () => {
+  const { data } = await client()('GET', '/api/courses/stroke-first-60-minutes/play');
+  assert.equal(data.mediaHasAudio, true);
+  const sw = data.tracks.find((t) => t.language === 'sw');
+  assert.equal(sw.audio, 'file');
+  const res = await fetch(BASE + sw.audioUrl, { headers: { Range: 'bytes=0-15' } });
+  assert.equal(res.status, 206);
+  assert.equal(data.tracks.find((t) => t.language === 'ha').audio, 'browser_tts', 'no voice engine for Hausa → device voice fallback');
+});
+
+test('live AI translation: permission gate and honest "not connected" state', async () => {
+  const c = client();
+  const detail = await c('GET', '/api/courses/stroke-first-60-minutes');
+  assert.equal(detail.data.liveAi.allowed, true);
+  const r = await c('POST', '/api/courses/stroke-first-60-minutes/live-translate', { language: 'yo', from: 0, count: 4 });
+  assert.equal(r.status, 503, 'without ANTHROPIC_API_KEY the server must not fake a translation');
+  const bad = await c('POST', '/api/courses/stroke-first-60-minutes/live-translate', { language: 'en' });
+  assert.equal(bad.status, 400);
 });

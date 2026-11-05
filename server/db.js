@@ -294,6 +294,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
   details TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS live_translation_cache (
+  course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  language TEXT NOT NULL,
+  idx INTEGER NOT NULL,
+  source_hash TEXT NOT NULL,
+  text TEXT NOT NULL,
+  model TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (course_id, language, idx)
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

@@ -42,7 +42,9 @@ async function snapshot() {
       const cues = {};
       for (const t of d.tracks) cues[t.language] = (await get(`/api/courses/${c.slug}/cues?lang=${t.language}`)).cues;
       const { entitlement, saved, progress, related, ...rest } = d;
-      out[c.slug] = { ...rest, poster: rel(d.poster), media: rel(play.mediaUrl.split('?')[0]), tracks: play.tracks.map((t) => ({ ...t, audioUrl: null, audio: t.audio === 'file' ? 'browser_tts' : t.audio })), cues };
+      out[c.slug] = { ...rest, poster: rel(d.poster), media: rel(play.mediaUrl.split('?')[0]), mediaHasAudio: play.mediaHasAudio,
+        // Audio-only MP4 (.m4a) is published as .mp4 so static hosts serve it with a media type.
+        tracks: play.tracks.map((t) => ({ ...t, audioUrl: t.audioUrl ? rel(t.audioUrl.split('?')[0]).replace(/\.m4a$/, '.mp4') : null })), cues };
     }
     return { meta, courses: out, operator: await get('/api/legal/operator') };
   } finally {
@@ -61,6 +63,7 @@ const result = await esbuild.build({
   plugins: [{
     name: 'static-api',
     setup(b) {
+      b.onResolve({ filter: /(^|\/)live\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), 'live-static.js') }));
       b.onResolve({ filter: /views\/admin\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), 'views/admin-static.js') }));
       b.onResolve({ filter: /(^|\/)api\.js$/ }, (args) => ({ path: path.join(path.dirname(args.importer), args.path.replace(/api\.js$/, 'static-api.js')) }));
     },
@@ -78,6 +81,11 @@ fs.mkdirSync(path.join(OUT, 'media/posters'), { recursive: true });
 for (const c of Object.values(snap.courses)) {
   fs.copyFileSync(path.join(ROOT, c.media), path.join(OUT, c.media));
   fs.copyFileSync(path.join(ROOT, c.poster), path.join(OUT, c.poster));
+  for (const t of c.tracks) {
+    if (!t.audioUrl) continue;
+    fs.mkdirSync(path.dirname(path.join(OUT, t.audioUrl)), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, t.audioUrl.replace(/\.mp4$/, '.m4a')), path.join(OUT, t.audioUrl));
+  }
 }
 const page = `<title>MedTranslate</title>
 <meta name="description" content="Medical knowledge without language barriers — interactive demo">

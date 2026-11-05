@@ -44,6 +44,9 @@ async function mediaUrl(path) {
   try { return await videoBlobs.get(path); } catch { videoBlobs.delete(path); return path; }
 }
 
+// The player resolves separately delivered audio tracks through this hook (blob URLs work in sandboxed frames).
+window.MT_RESOLVE_MEDIA = mediaUrl;
+
 function invoice(u, description, currency, gross) {
   const s = load(); const rate = VAT[u.country] ?? 0; const net = Math.round(gross / (1 + rate / 100));
   const list = (s.invoices[u.id] ||= []);
@@ -142,7 +145,7 @@ async function handle(method, path, body) {
     if (!territoryOk(c, u)) err(451, u?.country ? 'This course is not licensed for your country.' : 'This course is licensed for selected countries only. Please sign in and set your country in your profile.');
     const ent = entitlement(c, u);
     const pr = u && s.progress[u.id]?.[c.slug];
-    return { mediaUrl: await mediaUrl(c.media), poster: c.poster, durationSec: c.durationSec, mediaHasAudio: false, tracks: c.tracks, entitlement: ent,
+    return { mediaUrl: await mediaUrl(c.media), poster: c.poster, durationSec: c.durationSec, mediaHasAudio: !!c.mediaHasAudio, tracks: c.tracks, entitlement: ent,
       previewSec: ent.full ? null : previewLimit(c), resume: pr && pr.position < c.durationSec - 5 ? pr.position : 0, preferredLanguage: u?.preferredLanguage || null };
   }
   if ((m = p.match(/^\/api\/courses\/([^/]+)\/cues$/))) {

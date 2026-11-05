@@ -1,0 +1,96 @@
+{
+  "acs-early-ecg-recognition": {
+    "languages": [
+      "de",
+      "fr",
+      "es",
+      "tr",
+      "ar",
+      "pt",
+      "zh",
+      "hi",
+      "sw",
+      "am"
+    ],
+    "original": true
+  },
+  "checkpoint-inhibitor-iraes": {
+    "languages": [
+      "de",
+      "fr"
+    ],
+    "original": true
+  },
+  "chest-xray-systematic-reading": {
+    "languages": [
+      "de",
+      "tr"
+    ],
+    "original": true
+  },
+  "dermoscopy-pigmented-lesions": {
+    "languages": [
+      "de",
+      "es"
+    ],
+    "original": true
+  },
+  "pediatric-fever-without-source": {
+    "languages": [],
+    "original": true
+  },
+  "perioperative-antibiotic-prophylaxis": {
+    "languages": [
+      "es"
+    ],
+    "original": true
+  },
+  "rapid-sequence-induction-checklist": {
+    "languages": [
+      "de"
+    ],
+    "original": true
+  },
+  "red-eye-when-to-refer": {
+    "languages": [
+      "es"
+    ],
+    "original": true
+  },
+  "sepsis-hour-one": {
+    "languages": [
+      "de",
+      "fr",
+      "es",
+      "tr",
+      "ar",
+      "pt",
+      "zh",
+      "hi",
+      "sw",
+      "am"
+    ],
+    "original": true
+  },
+  "stroke-first-60-minutes": {
+    "languages": [
+      "de",
+      "fr",
+      "es",
+      "tr",
+      "ar",
+      "pt",
+      "zh",
+      "hi",
+      "sw",
+      "am"
+    ],
+    "original": true
+  },
+  "upper-gi-bleeding-initial-management": {
+    "languages": [
+      "ar"
+    ],
+    "original": true
+  }
+}

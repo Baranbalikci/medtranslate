@@ -1,12 +1,18 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { db, get, run, tx } from './db.js';
 import { config } from './config.js';
 import { hashPassword } from './auth.js';
 import { SPECIALTIES, PROVIDERS, PLANS, COURSES, GLOSSARY } from './seed-data.js';
+import { AFRICAN_TRANSLATIONS } from './seed-africa.js';
 
 export function seedIfEmpty() {
   const hasData = get('SELECT COUNT(*) AS n FROM specialties').n > 0;
+  migrate();
   if (!hasData) seedCatalog();
+  ensureDemoAfricanTranslations();
+  applyAudioManifest();
   ensureAdmin();
 }
 
@@ -68,6 +74,57 @@ function seedCatalog() {
     }
   });
   console.log('[seed] Demo catalogue created.');
+}
+
+// Schema migrations for databases created by earlier versions.
+function migrate() {
+  const cols = db.prepare('PRAGMA table_info(licenses)').all().map((c) => c.name);
+  if (!cols.includes('allow_live_ai')) db.exec('ALTER TABLE licenses ADD COLUMN allow_live_ai INTEGER NOT NULL DEFAULT 0');
+}
+
+// Adds the sample Kiswahili / Hausa / Amharic translations to demo courses (idempotent).
+function ensureDemoAfricanTranslations() {
+  tx(() => {
+    for (const [slug, langs] of Object.entries(AFRICAN_TRANSLATIONS)) {
+      const course = get('SELECT id FROM courses WHERE slug = ? AND is_demo = 1', slug);
+      if (!course) continue;
+      const lic = get('SELECT id, languages, is_demo FROM licenses WHERE course_id = ?', course.id);
+      if (lic?.is_demo) {
+        const set = new Set(JSON.parse(lic.languages));
+        Object.keys(langs).forEach((l) => set.add(l));
+        run('UPDATE licenses SET languages = ?, allow_live_ai = 1 WHERE id = ?', JSON.stringify([...set]), lic.id);
+      }
+      for (const [lang, texts] of Object.entries(langs)) {
+        if (get('SELECT 1 FROM translations WHERE course_id = ? AND language = ?', course.id, lang)) continue;
+        const tid = Number(run(`INSERT INTO translations (course_id, language, status, provider, audio_mode, released_at)
+            VALUES (?,?, 'released', 'seed-sample', 'browser_tts', datetime('now'))`, course.id, lang).lastInsertRowid);
+        texts.forEach((text, idx) => run('INSERT INTO translation_cues (translation_id, idx, text) VALUES (?,?,?)', tid, idx, text));
+        run(`INSERT INTO qc_reviews (translation_id, reviewer_label, qualification, decision, terminology_ok, meaning_preserved, sync_ok, notes, is_demo)
+            VALUES (?, 'Demo seed (no reviewer)', 'n/a', 'approved', 1, 1, 1, ?, 1)`, tid,
+          'Placeholder QC record created by seed script. This translation has NOT been reviewed by a medical professional.');
+      }
+    }
+    // Demo licences allow live AI subtitles so the feature can be tried.
+    run('UPDATE licenses SET allow_live_ai = 1 WHERE is_demo = 1');
+  });
+}
+
+// Uses the generated AI voice tracks (tools/audio/generate_audio.py) for demo courses.
+function applyAudioManifest() {
+  let manifest;
+  try { manifest = JSON.parse(fs.readFileSync(path.join(config.mediaDir, 'audio', 'manifest.json'), 'utf8')); } catch { return; }
+  tx(() => {
+    for (const [slug, m] of Object.entries(manifest)) {
+      const course = get('SELECT id FROM courses WHERE slug = ? AND is_demo = 1', slug);
+      if (!course) continue;
+      if (m.original) run('UPDATE courses SET media_has_audio = 1 WHERE id = ?', course.id);
+      for (const lang of m.languages || []) {
+        const file = `audio/${slug}/${lang}.m4a`;
+        if (!fs.existsSync(path.join(config.mediaDir, file))) continue;
+        run("UPDATE translations SET audio_mode = 'file', audio_file = ? WHERE course_id = ? AND language = ?", file, course.id, lang);
+      }
+    }
+  });
 }
 
 function ensureAdmin() {
