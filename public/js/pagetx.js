@@ -171,10 +171,26 @@ function renderPill() {
 
 function updateHeaderButton() {
   const b = document.querySelector('[data-action="site-lang"] .code');
-  if (b) b.textContent = lang.toUpperCase();
+  if (b) b.textContent = langMeta(lang)?.native || lang.toUpperCase();
+  // Layout stays left-to-right (full mirroring is not implemented); text blocks of right-to-left
+  // languages flow and align correctly via unicode-bidi (see CSS).
+  document.documentElement.toggleAttribute('data-rtl', langMeta(lang)?.dir === 'rtl');
 }
 
-const GREETINGS = [['en', 'Choose your language'], ['sw', 'Chagua lugha yako'], ['fr', 'Choisissez votre langue'], ['ar', 'اختر لغتك'], ['ha', 'Zaɓi yarenka'], ['es', 'Elige tu idioma'], ['pt', 'Escolha o seu idioma'], ['am', 'ቋንቋዎን ይምረጡ'], ['yo', 'Yan èdè rẹ'], ['hi', 'अपनी भाषा चुनें'], ['zh', '选择您的语言'], ['de', 'Wähle deine Sprache']];
+const GREETINGS = [['en', 'Medicine speaks every language'], ['sw', 'Tiba inazungumza kila lugha'], ['fr', 'La médecine parle toutes les langues'], ['ar', 'الطب يتحدث كل اللغات'], ['ha', 'Likitanci yana magana da kowane harshe'], ['es', 'La medicina habla todos los idiomas'], ['pt', 'A medicina fala todas as línguas'], ['am', 'ሕክምና ሁሉንም ቋንቋ ይናገራል'], ['qu', 'Hampiqa tukuy simipi rimanmi'], ['hi', 'चिकित्सा हर भाषा बोलती है'], ['zh', '医学说所有的语言'], ['de', 'Medizin spricht jede Sprache']];
+
+const REGION_LABEL = { africa: 'Africa', americas: 'Americas', mena: 'Middle East & N. Africa', asia: 'Asia', europe: 'Europe' };
+
+function recommended() {
+  const m = state.meta; const seen = new Set(); const out = [];
+  for (const tag of navigator.languages || [navigator.language]) {
+    const code = String(tag || '').slice(0, 2).toLowerCase();
+    const l = m.languages.find((x) => x.code === code);
+    if (l && !seen.has(code)) { seen.add(code); out.push(l); }
+  }
+  for (const code of ['en', 'sw', 'fr', 'ar']) { const l = m.languages.find((x) => x.code === code); if (l && !seen.has(code) && out.length < 4) { seen.add(code); out.push(l); } }
+  return out.slice(0, 4);
+}
 
 export function openChooser({ firstVisit = false } = {}) {
   document.querySelector('.tx-chooser')?.remove();
@@ -182,33 +198,68 @@ export function openChooser({ firstVisit = false } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'tx-chooser';
   wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Choose your language');
-  wrap.innerHTML = String(html`<div class="txc-card">
-    <div class="txc-head">
-      <div class="txc-greet" aria-hidden="true">${GREETINGS.map(([c, t], i) => html`<span style="--i:${i}" dir="${c === 'ar' ? 'rtl' : 'ltr'}">${t}</span>`)}</div>
-      <h2>Choose your language</h2>
-      <p>The whole website — menus, pages and course descriptions — is translated by AI. Courses play with subtitles and, where available, an AI voice in your language.</p>
-      <input type="search" class="txc-search" placeholder="Search 53 languages…" aria-label="Search languages">
-    </div>
-    <div class="txc-list">${m.regions.map((r) => html`<section><h3>${r.name}</h3><div class="txc-grid">
-      ${m.languages.filter((l) => l.region === r.code).map((l) => html`<button type="button" data-pick="${l.code}" class="${l.code === lang ? 'on' : ''}" data-search="${`${l.native} ${l.name}`.toLowerCase()}"><b>${l.native}</b><small>${l.name}</small></button>`)}
-    </div></section>`)}</div>
-    <div class="txc-foot"><span class="xs">Machine translation can contain errors. The original English (and German legal texts) remain authoritative.</span>
-      <button type="button" class="btn btn-ghost btn-sm" data-pick="${firstVisit ? 'en' : lang}">${firstVisit ? 'Continue in English' : 'Close'}</button></div></div>`);
+  const tile = (l, big = false) => html`<button type="button" data-pick="${l.code}" class="lt ${l.code === lang ? 'on' : ''} ${big ? 'big' : ''} ${l.live ? 'ready' : ''}" data-region="${l.region}" data-search="${`${l.native} ${l.name} ${l.code}`.toLowerCase()}" dir="${l.dir}">
+      <b>${l.native}</b><small>${l.name}</small><i class="dot" title="${l.live ? 'Subtitles and voice ready' : 'Live AI translation'}"></i></button>`;
+  const rec = recommended();
+  wrap.innerHTML = String(html`
+    <div class="txc-aurora" aria-hidden="true"></div>
+    <div class="txc-stage">
+      <section class="txc-left" aria-hidden="true">
+        <div class="txc-brand"><svg width="28" height="28" viewBox="0 0 32 32"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="#0A1A33" stroke="rgba(255,255,255,.18)"/><path d="M9 21V11l7 6 7-6v10" fill="none" stroke="url(#cg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="8" r="2.4" fill="#22D3EE"/></svg><span>Med<b>Translate</b></span></div>
+        <div class="txc-globe"><canvas id="txc-canvas"></canvas></div>
+        <div class="txc-greet">${GREETINGS.map(([c, t], i) => html`<span style="--i:${i}" dir="${c === 'ar' ? 'rtl' : 'ltr'}">${t}</span>`)}</div>
+        <div class="txc-facts"><span><b>${m.languages.length}</b> languages</span><span><b>${m.languages.filter((l) => l.region === 'africa').length}</b> African</span><span><b>AI</b> subtitles · voice · website</span></div>
+      </section>
+      <section class="txc-right">
+        <header>
+          <span class="txc-kicker">Welcome · Karibu · Bienvenue · مرحبا · Bem-vindo</span>
+          <h2>Choose your language</h2>
+          <p>Menus, pages and course texts are translated by AI. Lectures play with subtitles and, where available, an AI voice.</p>
+          <label class="txc-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" placeholder="Search ${m.languages.length} languages…" aria-label="Search languages" autocomplete="off"><kbd>↵</kbd></label>
+          <div class="txc-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-tab="all">All</button>
+            ${m.regions.map((r) => html`<button type="button" role="tab" aria-selected="false" data-tab="${r.code}">${REGION_LABEL[r.code] || r.name}</button>`)}
+          </div>
+        </header>
+        <div class="txc-list">
+          <div class="txc-block" data-block="rec"><h3>Recommended for you</h3><div class="txc-rec">${rec.map((l) => tile(l, true))}</div></div>
+          <div class="txc-block" data-block="all"><div class="txc-grid">${m.languages.map((l) => tile(l))}</div></div>
+          <p class="txc-empty" hidden>No language found. Try another spelling.</p>
+        </div>
+        <footer>
+          <span class="txc-legend"><i class="dot ok"></i> subtitles + voice ready &nbsp; <i class="dot"></i> live AI translation</span>
+          <button type="button" class="txc-skip" data-pick="${firstVisit ? 'en' : lang}">${firstVisit ? 'Continue in English' : 'Close'} →</button>
+        </footer>
+      </section>
+    </div>`);
   document.body.append(wrap);
   document.body.classList.add('menu-open');
-  const close = () => { wrap.remove(); document.body.classList.remove('menu-open'); };
+  let globe = null;
+  import('./globe.js').then(({ createGlobe }) => { const c = wrap.querySelector('#txc-canvas'); if (c && wrap.isConnected) globe = createGlobe(c, { size: 0.42, labels: true }); });
+  const close = () => { globe?.destroy(); wrap.remove(); document.body.classList.remove('menu-open'); };
+  const input = wrap.querySelector('input');
+  let tab = 'all';
+  const apply = () => {
+    const n = input.value.trim().toLowerCase();
+    let any = 0;
+    wrap.querySelectorAll('.txc-grid .lt').forEach((b) => { const show = (tab === 'all' || b.dataset.region === tab) && (!n || b.dataset.search.includes(n)); b.hidden = !show; if (show) any++; });
+    wrap.querySelector('[data-block="rec"]').hidden = !!n || tab !== 'all';
+    wrap.querySelector('.txc-empty').hidden = any > 0;
+  };
   wrap.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-tab]');
+    if (t) { tab = t.dataset.tab; wrap.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t))); apply(); if (tab !== 'all') globe?.focus(tab); return; }
     const b = e.target.closest('[data-pick]');
     if (b) { close(); await setSiteLanguage(b.dataset.pick); return; }
     if (e.target === wrap && !firstVisit) close();
   });
-  wrap.addEventListener('input', (e) => {
-    const n = e.target.value.trim().toLowerCase();
-    wrap.querySelectorAll('[data-search]').forEach((b) => { b.hidden = !!n && !b.dataset.search.includes(n); });
-    wrap.querySelectorAll('section').forEach((s) => { s.hidden = ![...s.querySelectorAll('[data-search]')].some((b) => !b.hidden); });
+  wrap.addEventListener('pointerover', (e) => { const b = e.target.closest('.lt'); if (b && b.dataset.region) globe?.focus(b.dataset.region); });
+  input.addEventListener('input', apply);
+  wrap.addEventListener('keydown', async (e) => {
+    if (e.key === 'Escape' && !firstVisit) close();
+    if (e.key === 'Enter' && e.target === input) { const first = wrap.querySelector('.txc-grid .lt:not([hidden])'); if (first) { close(); await setSiteLanguage(first.dataset.pick); } }
   });
-  wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !firstVisit) close(); });
-  setTimeout(() => wrap.querySelector('.txc-search')?.focus(), 50);
+  setTimeout(() => input.focus(), 80);
 }
 
 document.addEventListener('click', (e) => {

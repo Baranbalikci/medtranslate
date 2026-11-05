@@ -112,7 +112,7 @@ function renderHeader() {
         ${NAV.map(([href, label]) => html`<a href="${href}" class="nav-link">${label}</a>`)}
       </nav>
       <div class="header-actions">
-        <button type="button" class="lang-switch" data-action="site-lang" aria-label="Website language">${icon('globe', 17)}<span class="code">${(storedSiteLanguage() || 'en').toUpperCase()}</span></button>
+        <button type="button" class="lang-switch" data-action="site-lang" aria-label="Website language">${icon('globe', 17)}<span class="code">${state.meta?.languages.find((l) => l.code === (storedSiteLanguage() || 'en'))?.native || 'English'}</span></button>
         <a href="/courses" class="icon-btn hide-sm" aria-label="Search courses">${icon('search', 19)}</a>
         ${u ? html`
           ${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-sm hide-sm">${icon('shield', 16)} Admin</a>` : ''}

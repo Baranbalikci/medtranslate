@@ -38,12 +38,13 @@ export default {
           </div>
           <div class="hero-stats reveal" style="--d:.65s">
             <div><b data-count="${m.stats.courses}">0</b><span>demo courses</span></div>
-            <div><b data-count="${m.stats.languages}">0</b><span>languages with released tracks</span></div>
+            <div><b data-count="${m.stats.languages}">0</b><span>languages ready to play</span></div>
             <div><b data-count="${m.languages.length}">0</b><span>languages via live AI</span></div>
           </div>
         </div>
         <div class="hero-visual reveal" data-fx="rise3d">
-          <div class="tv" aria-hidden="true">
+          <div class="globe-wrap"><canvas id="hero-globe" role="img" aria-label="Globe with connections from Europe to Africa, the Americas and Asia"></canvas></div>
+          <div class="tv tv-mini" aria-hidden="true">
             <div class="tv-screen">
               <img src="/media/posters/acs-early-ecg-recognition.jpg" alt="">
               <span class="tv-badge">${icon('sparkles', 13)} AI translation · live switch</span>
@@ -53,10 +54,9 @@ export default {
             <div class="tv-bar">
               <span style="color:#fff">${icon('pause', 16)}</span>
               <div class="tv-progress"><i></i></div>
-              <div class="tv-langs">${HERO_LINES.slice(0, 6).map(([c], i) => html`<span class="tv-lang ${i === 0 ? 'on' : ''}" data-l="${c}">${c}</span>`)}</div>
+              <div class="tv-langs">${HERO_LINES.slice(0, 5).map(([c], i) => html`<span class="tv-lang ${i === 0 ? 'on' : ''}" data-l="${c}">${c}</span>`)}</div>
             </div>
           </div>
-          <div class="float-card fc-1"><span class="ic">${icon('subtitles', 18)}</span><div><b>Subtitles synced</b><small>Medical terminology glossary</small></div></div>
           <div class="float-card fc-2"><span class="ic"><span class="wave-bars"><i></i><i></i><i></i><i></i><i></i></span></span><div><b>AI voice · Kiswahili</b><small>Time-synchronised dubbing</small></div></div>
         </div>
       </div>
@@ -259,6 +259,8 @@ export default {
       const host = $('#featured', root); if (!host) return;
       host.innerHTML = String(html`<div class="course-grid">${courses.slice(0, 3).map((c) => courseCard(c, state.meta.languages))}</div>`);
     }).catch(() => { const h = $('#featured', root); if (h) h.innerHTML = '<p class="muted">Courses could not be loaded.</p>'; });
+    let globe = null;
+    import('../globe.js').then(({ createGlobe }) => { const c = $('#hero-globe', root); if (c) globe = createGlobe(c, { size: 0.43 }); });
     // Hero subtitle language cycle
     let i = 0;
     const sub = $('#tv-sub', root);
@@ -273,7 +275,7 @@ export default {
         root.querySelectorAll('.tv-lang').forEach((x) => x.classList.toggle('on', x.dataset.l === HERO_LINES[i][0]));
       }, 350);
     }, 3200);
-    return () => { clearInterval(timer); storyIo?.disconnect(); };
+    return () => { clearInterval(timer); storyIo?.disconnect(); globe?.destroy(); };
   },
 };
 
