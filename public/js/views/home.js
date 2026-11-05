@@ -18,9 +18,11 @@ export const specIcon = (name) => icon(name || 'stethoscope', 20);
 
 export default {
   title: '',
-  description: 'Access high-quality medical education worldwide through AI-powered translation, subtitles and multilingual audio.',
+  description: 'Emergency medicine education in every language: licensed courses with AI subtitles and AI voice, for teams who cannot wait for a translation.',
   async render() {
     const m = state.meta;
+    const focus = m.focus;
+    const topics = m.specialties.filter((s) => s.course_count && s.slug !== focus?.slug);
     const live = m.languages.filter((l) => l.live);
     const africa = m.languages.filter((l) => l.region === 'africa');
     const row = (list) => html`${[...list, ...list].map((l) => html`<span class="lang-pill ${l.live ? 'live' : ''}" aria-hidden="true">${l.live ? html`<span class="live-dot"></span>` : html`<span class="soon-dot"></span>`}${l.native} <small>${l.name}</small></span>`)}`;
@@ -29,15 +31,15 @@ export default {
       <div class="hero-glow" aria-hidden="true"></div>
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="pill reveal" data-fx="drop"><span class="dot">NEW</span> Live AI subtitles in any language · Africa first</span>
-          <h1 data-fx="words">Medical knowledge<br><span class="grad-text">without language barriers.</span></h1>
-          <p class="lead reveal" data-fx="blur" style="--d:.35s">Access high-quality medical education worldwide through AI-powered translation, subtitles and multilingual audio — from licensed providers, with transparent quality control.</p>
+          <span class="pill reveal" data-fx="drop"><span class="dot">${focus ? focus.name.toUpperCase() : 'NEW'}</span> Launch focus · live AI subtitles in any language</span>
+          <h1 data-fx="words">${focus ? 'Emergency medicine' : 'Medical knowledge'}<br><span class="grad-text">without language barriers.</span></h1>
+          <p class="lead reveal" data-fx="blur" style="--d:.35s">${focus ? 'When minutes count, language should not. Licensed emergency medicine education with AI subtitles and voice in the language your team speaks.' : 'Access high-quality medical education worldwide through AI-powered translation, subtitles and multilingual audio — from licensed providers, with transparent quality control.'}</p>
           <div class="hero-actions reveal" style="--d:.5s">
             <a href="/courses" class="btn btn-accent btn-lg magnetic">Explore Courses ${icon('arrow', 18)}</a>
             <a href="/technology" class="btn btn-glass btn-lg">Discover the Technology</a>
           </div>
           <div class="hero-stats reveal" style="--d:.65s">
-            <div><b data-count="${m.stats.courses}">0</b><span>demo courses</span></div>
+            <div><b data-count="${m.stats.courses}">0</b><span>${focus ? 'emergency courses' : 'demo courses'}</span></div>
             <div><b data-count="${m.stats.languages}">0</b><span>languages ready to play</span></div>
             <div><b data-count="${m.languages.length}">0</b><span>languages via live AI</span></div>
           </div>
@@ -63,11 +65,28 @@ export default {
       <a href="#platform" class="scroll-cue" aria-label="Scroll down"><span></span></a>
     </section>
 
+    ${focus ? html`<section class="section why" id="why">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow reveal">Why emergency medicine first</span>
+          <h2 data-fx="words">When time is the treatment, language is a delay.</h2>
+          <p class="reveal" data-fx="blur">We start where a misunderstood sentence costs the most, and where the teaching travels best across borders.</p>
+        </div>
+        <div class="grid-3" data-stagger>
+          ${[
+            ['clock', 'Minutes matter', 'Recognition and first-hour care decide outcomes in stroke, sepsis, cardiac and airway emergencies. Teams need to understand the lesson the first time.'],
+            ['globe', 'Protocols travel', 'Emergency pathways are built on shared evidence and checklists, so a well-translated lesson is useful in Nairobi, Lima and Berlin alike.'],
+            ['layers', 'Short and focused', 'Compact modules fit between shifts and are quick to translate, review and release one language at a time.'],
+          ].map(([i, t, d]) => html`<div class="feature"><div class="ic">${icon(i, 22)}</div><h3>${t}</h3><p>${d}</p></div>`)}
+        </div>
+      </div>
+    </section>` : ''}
+
     <section class="section" id="platform">
       <div class="container">
         <div class="section-head">
           <span class="eyebrow reveal">The platform</span>
-          <h2 data-fx="words">Great medical education already exists. Language shouldn't lock it away.</h2>
+          <h2 data-fx="words">${focus ? 'Great emergency teaching already exists. Language shouldn\'t lock it away.' : 'Great medical education already exists. Language shouldn\'t lock it away.'}</h2>
           <p class="reveal" data-fx="blur">MedTranslate licenses existing CME/CPD video courses and makes them accessible in many languages — the medical content stays exactly as the original faculty presented it. Only the language changes.</p>
         </div>
         <div class="grid-3" data-stagger>
@@ -172,11 +191,11 @@ export default {
     <section class="section">
       <div class="container">
         <div class="row between" style="margin-bottom:32px;align-items:flex-end">
-          <div class="section-head" style="margin:0"><span class="eyebrow reveal">Medical specialties</span><h2 data-fx="words">Learn across the full breadth of medicine</h2></div>
-          <a href="/specialties" class="btn btn-ghost reveal">All specialties ${icon('arrow', 16)}</a>
+          <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Learn by emergency topic' : 'Learn across the full breadth of medicine'}</h2></div>
+          <a href="/specialties" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
         </div>
         <div class="spec-grid" data-stagger>
-          ${m.specialties.map((s) => html`<a class="spec" href="/specialties/${s.slug}"><span class="ic">${specIcon(s.icon)}</span><span><b>${s.name}</b><small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small></span></a>`)}
+          ${(focus ? topics : m.specialties).map((s) => html`<a class="spec" href="/specialties/${s.slug}"><span class="ic">${specIcon(s.icon)}</span><span><b>${s.name}</b><small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small></span></a>`)}
         </div>
       </div>
     </section>

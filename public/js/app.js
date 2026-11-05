@@ -68,9 +68,9 @@ async function render({ keepScroll = false } = {}) {
     const out = await view.render(ctx);
     if (token !== navToken) return;
     const title = typeof view.title === 'function' ? view.title(ctx) : view.title;
-    document.title = title ? `${title} · MedTranslate` : 'MedTranslate — Medical Knowledge Without Language Barriers';
+    document.title = title ? `${title} · MedTranslate` : 'MedTranslate — Emergency Medicine Without Language Barriers';
     const desc = view.description ? (typeof view.description === 'function' ? view.description(ctx) : view.description) : null;
-    $('meta[name="description"]').setAttribute('content', desc || 'International medical education (CME/CPD) with AI-powered subtitles and multilingual audio.');
+    $('meta[name="description"]').setAttribute('content', desc || 'Emergency medicine education (CME/CPD) in every language, with AI subtitles and multilingual audio.');
     main.innerHTML = String(out);
     main.classList.remove('leaving');
     main.removeAttribute('aria-busy');
@@ -96,7 +96,7 @@ async function render({ keepScroll = false } = {}) {
 
 // ── header / footer ─────────────────────────────────────────────────────────
 const NAV = [
-  ['/courses', 'Courses'], ['/planner', 'Planner'], ['/specialties', 'Specialties'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
+  ['/courses', 'Courses'], ['/planner', 'Planner'], ['/specialties', 'Topics'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
 ];
 
 function logo() {
@@ -160,10 +160,10 @@ function renderFooter() {
       <div class="footer-grid">
         <div class="footer-brand">
           ${logo()}
-          <p>Licensed medical education, made accessible across languages through AI-generated subtitles and audio — with transparent labelling and medical quality control.</p>
+          <p>${state.meta?.focus ? 'Licensed emergency medicine education, made accessible across languages through AI-generated subtitles and audio — with transparent labelling and medical quality control.' : 'Licensed medical education, made accessible across languages through AI-generated subtitles and audio — with transparent labelling and medical quality control.'}</p>
           <p class="footer-note">${icon('info', 14)} Demo build: all courses, providers and translations are sample data.</p>
         </div>
-        <div><h4>Platform</h4><a href="/courses">Courses</a><a href="/specialties">Medical Specialties</a><a href="/technology">Technology</a><a href="/pricing">Pricing</a><a href="/faq">FAQ</a></div>
+        <div><h4>Platform</h4><a href="/courses">Courses</a><a href="/specialties">Emergency Topics</a><a href="/technology">Technology</a><a href="/pricing">Pricing</a><a href="/faq">FAQ</a></div>
         <div><h4>Company</h4><a href="/about">About Us</a><a href="/partners">Partner With Us</a><a href="/contact">Contact</a><a href="/legal/cme-akkreditierung">CME/CPD Accreditation</a><a href="/legal/ki-transparenz">AI Transparency</a></div>
         <div><h4>Legal</h4><a href="/legal/impressum">Impressum</a><a href="/legal/datenschutz">Datenschutz</a><a href="/legal/agb">AGB</a><a href="/legal/widerruf">Widerrufsbelehrung</a><a href="/legal/cookies">Cookie-Richtlinie</a><a href="/legal/urheberrecht">Urheberrechtliche Hinweise</a><a href="/legal/haftungsausschluss">Medizinischer Haftungsausschluss</a><a href="/legal/meldung">Rechtliche Meldungen</a></div>
       </div>

@@ -1,4 +1,5 @@
-import { get, all, parseJson } from './db.js';
+import { get, all, parseJson, getSetting } from './db.js';
+import { config } from './config.js';
 import { licenseFor, accreditationFor, availableTracks, territoryAllows, publicAccreditation, entitlement } from './compliance.js';
 
 const COURSE_SELECT = `SELECT c.*, s.slug AS specialty_slug, s.name AS specialty_name, s2.slug AS specialty2_slug, s2.name AS specialty2_name,
@@ -8,7 +9,15 @@ const COURSE_SELECT = `SELECT c.*, s.slug AS specialty_slug, s.name AS specialty
 
 export const loadCourseBySlug = (slug) => get(`${COURSE_SELECT} WHERE c.slug = ?`, slug);
 export const loadCourseById = (id) => get(`${COURSE_SELECT} WHERE c.id = ?`, id);
-export const loadPublishedCourses = () => all(`${COURSE_SELECT} WHERE c.status = 'published' ORDER BY c.release_date DESC`);
+/** The launch focus (specialty slug) or null when the whole catalogue is public. */
+export function launchFocus() {
+  if (config.launchFocus !== undefined) return config.launchFocus || null;
+  return getSetting('launch_focus', 'emergency-medicine') || null;
+}
+const inFocus = (c, f = launchFocus()) => !f || c.specialty_slug === f || c.specialty2_slug === f;
+/** A course is public when it is published AND inside the launch focus. */
+export const isPubliclyVisible = (c) => !!c && c.status === 'published' && inFocus(c);
+export const loadPublishedCourses = () => all(`${COURSE_SELECT} WHERE c.status = 'published' ORDER BY c.release_date DESC`).filter((c) => inFocus(c));
 
 export function courseCard(c, user) {
   const license = licenseFor(c.id);

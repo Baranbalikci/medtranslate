@@ -59,5 +59,7 @@ export const config = {
     vatId: env.OPERATOR_VAT_ID || '[USt-IdNr. gemäß § 27a UStG]',
     dpo: env.OPERATOR_DPO || '[Datenschutzbeauftragte/r, Kontakt]',
   },
+  // Launch focus: only courses of this specialty are public. '' = all specialties; unset = use the admin setting.
+  launchFocus: env.LAUNCH_FOCUS,
   policyVersion: '2026-11-draft-1',
 };

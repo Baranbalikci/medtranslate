@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { db, get, run, tx } from './db.js';
+import { db, get, run, tx, getSetting, setSetting } from './db.js';
 import { config } from './config.js';
 import { hashPassword } from './auth.js';
 import { SPECIALTIES, PROVIDERS, PLANS, COURSES, GLOSSARY } from './seed-data.js';
@@ -81,6 +81,18 @@ function seedCatalog() {
 function migrate() {
   const cols = db.prepare('PRAGMA table_info(licenses)').all().map((c) => c.name);
   if (!cols.includes('allow_live_ai')) db.exec('ALTER TABLE licenses ADD COLUMN allow_live_ai INTEGER NOT NULL DEFAULT 0');
+  // One-time: launch with emergency medicine only, and file the emergency-relevant demo courses under it.
+  if (!get("SELECT 1 FROM settings WHERE key = 'launch_focus'")) setSetting('launch_focus', 'emergency-medicine');
+  if (!get("SELECT 1 FROM settings WHERE key = 'demo_mapping_emergency_v1'") && get('SELECT 1 FROM specialties LIMIT 1')) {
+    const map = { 'acs-early-ecg-recognition': 'cardiology', 'stroke-first-60-minutes': 'neurology', 'sepsis-hour-one': 'intensive-care',
+      'rapid-sequence-induction-checklist': 'anesthesiology', 'upper-gi-bleeding-initial-management': 'gastroenterology',
+      'red-eye-when-to-refer': 'ophthalmology', 'chest-xray-systematic-reading': 'radiology', 'pediatric-fever-without-source': 'pediatrics' };
+    const id = (slug) => get('SELECT id FROM specialties WHERE slug = ?', slug)?.id ?? null;
+    for (const [slug, sec] of Object.entries(map)) {
+      run('UPDATE courses SET specialty_id = ?, secondary_specialty_id = ? WHERE slug = ? AND is_demo = 1', id('emergency-medicine'), id(sec), slug);
+    }
+    setSetting('demo_mapping_emergency_v1', true);
+  }
 }
 
 // Adds the sample Kiswahili / Hausa / Amharic translations to demo courses (idempotent).

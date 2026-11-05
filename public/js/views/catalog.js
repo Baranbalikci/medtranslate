@@ -13,8 +13,11 @@ export default {
   render(ctx) {
     const m = state.meta;
     const f = { ...ctx.query, ...(ctx.params.slug ? { specialty: ctx.params.slug } : {}) };
-    const spec = m.specialties.find((s) => s.slug === f.specialty);
-    const total = m.specialties.reduce((n, s) => n + s.course_count, 0);
+    const focus = m.focus;
+    const spec = m.specialties.find((s) => s.slug === f.specialty && s.slug !== focus?.slug);
+    const total = m.stats.courses;
+    const headline = (s) => (s ? s.name : focus ? 'Emergency medicine courses' : 'Course catalogue');
+    const lead = (s) => (s ? s.description : focus ? 'Time-critical education with AI subtitles and AI voice, in the language your team speaks. Browse by topic, language and level.' : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.');
     const opt = (v, label, cur) => html`<option value="${v}" ${String(cur ?? '') === String(v) ? 'selected' : ''}>${label}</option>`;
     const pill = (name, label, ic, options, cur) => html`<label class="fpill ${cur ? 'set' : ''}"><span class="fp-l">${icon(ic, 14)} ${label}</span>
       <select name="${name}" aria-label="${label}">${options.map(([v, t]) => opt(v, t, cur))}</select>${icon('chevron', 14)}</label>`;
@@ -22,17 +25,17 @@ export default {
       <section class="cat-hero">
         <div class="cat-aurora" aria-hidden="true"></div>
         <div class="container">
-          <div class="crumbs"><a href="/">Home</a><span>/</span><a href="/specialties">Specialties</a>${spec ? html`<span>/</span><span>${spec.name}</span>` : ''}</div>
+          <div class="crumbs"><a href="/">Home</a><span>/</span><a href="${focus ? '/courses' : '/specialties'}">${focus ? 'Emergency medicine' : 'Specialties'}</a>${spec ? html`<span>/</span><span>${spec.name}</span>` : ''}</div>
           <div class="cat-title">
             <div>
-              <h1 id="cat-h1">${spec ? spec.name : 'Course catalogue'}</h1>
-              <p class="lead" id="cat-lead">${spec ? spec.description : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.'}</p>
+              <h1 id="cat-h1">${headline(spec)}</h1>
+              <p class="lead" id="cat-lead">${lead(spec)}</p>
             </div>
             <label class="cat-search">${icon('search', 18)}<input type="search" name="q" form="filters" placeholder="Search title, topic, provider…" value="${f.q || ''}" aria-label="Search courses" autocomplete="off"><kbd>/</kbd></label>
           </div>
-          <div class="spec-rail" role="tablist" aria-label="Medical specialty">
+          <div class="spec-rail" role="tablist" aria-label="${focus ? 'Emergency topic' : 'Medical specialty'}">
             <button type="button" role="tab" class="sr-chip ${!spec ? 'on' : ''}" data-spec="" aria-selected="${!spec}">${icon('layers', 16)}<b>All</b><i>${total}</i></button>
-            ${m.specialties.filter((s) => s.course_count).map((s) => html`<button type="button" role="tab" class="sr-chip ${spec?.slug === s.slug ? 'on' : ''}" data-spec="${s.slug}" aria-selected="${spec?.slug === s.slug}">${specIcon(s.icon)}<b>${s.name}</b><i>${s.course_count}</i></button>`)}
+            ${m.specialties.filter((s) => s.course_count && s.slug !== focus?.slug).map((s) => html`<button type="button" role="tab" class="sr-chip ${spec?.slug === s.slug ? 'on' : ''}" data-spec="${s.slug}" aria-selected="${spec?.slug === s.slug}">${specIcon(s.icon)}<b>${s.name}</b><i>${s.course_count}</i></button>`)}
           </div>
         </div>
       </section>
@@ -93,16 +96,16 @@ export default {
     };
 
     function paintHero(slug) {
-      const s = m.specialties.find((x) => x.slug === slug);
-      $('#cat-h1', root).textContent = s ? s.name : 'Course catalogue';
-      $('#cat-lead', root).textContent = s ? s.description : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.';
+      const s = m.specialties.find((x) => x.slug === slug && x.slug !== m.focus?.slug);
+      $('#cat-h1', root).textContent = s ? s.name : m.focus ? 'Emergency medicine courses' : 'Course catalogue';
+      $('#cat-lead', root).textContent = s ? s.description : m.focus ? 'Time-critical education with AI subtitles and AI voice, in the language your team speaks. Browse by topic, language and level.' : 'Licensed medical education with AI subtitles and AI voice. Find the right course by specialty, language and level.';
       $$('.sr-chip', root).forEach((c) => { const on = (c.dataset.spec || '') === (slug || ''); c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
-      document.title = `${s ? s.name : 'Courses'} · MedTranslate`;
+      document.title = `${s ? s.name : m.focus ? 'Emergency medicine courses' : 'Courses'} · MedTranslate`;
     }
 
     async function load() {
       const v = values();
-      const base = v.specialty ? `/specialties/${v.specialty}` : '/courses';
+      const base = v.specialty && v.specialty !== m.focus?.slug ? `/specialties/${v.specialty}` : '/courses';
       const urlQ = new URLSearchParams(v); urlQ.delete('specialty');
       setUrl(base + (urlQ.toString() ? `?${urlQ}` : ''), true);
       const my = ++token;

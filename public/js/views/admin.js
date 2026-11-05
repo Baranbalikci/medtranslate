@@ -154,7 +154,12 @@ export default function adminView() {
               ${k.course_ref ? html`<label class="check" style="margin:0"><input type="checkbox" name="suspendCourse"> <span class="small">Suspend course (takedown)</span></label>` : ''}
               <button class="btn btn-ghost btn-sm">Save</button></div></form>`) : html`<p class="muted">No complaints.</p>`}</div>`;
 
-        case 'taxonomy': return html`<div class="grid-2">
+        case 'taxonomy': return html`
+          <div class="panel" style="margin-bottom:20px"><div class="panel-head"><h3>Launch focus</h3><span class="small muted">What the public catalogue shows</span></div>
+            <p class="small muted" style="margin-top:0">While a focus is set, only courses filed under that specialty are visible on the website, in search, in the sitemap and by direct link. Staff still see everything here. Clear it to open the whole catalogue.</p>
+            <form id="focus" class="row"><select name="specialty" class="input-sm" style="width:auto" ${d.focusLocked ? 'disabled' : ''}><option value="">None — all specialties</option>${d.specialties.map((s) => html`<option value="${s.slug}" ${d.focus === s.slug ? 'selected' : ''}>${s.name}</option>`)}</select>
+              <button class="btn btn-primary btn-sm" ${d.focusLocked ? 'disabled' : ''}>Apply</button>${d.focusLocked ? html`<span class="xs muted">Fixed by the LAUNCH_FOCUS environment variable.</span>` : ''}</form></div>
+          <div class="grid-2">
           <div class="panel"><div class="panel-head"><h3>Medical specialties</h3></div>
             <form id="new-spec" class="row" style="margin-bottom:16px"><input name="name" class="input-sm" placeholder="New specialty" required style="flex:1"><input name="description" class="input-sm" placeholder="Short description" style="flex:1"><button class="btn btn-primary btn-sm">Add</button></form>
             <ul class="small">${d.specialties.map((s) => html`<li>${s.name}</li>`)}</ul></div>
@@ -362,6 +367,7 @@ export default function adminView() {
         if (v.suspendCourse && !(await ask('Suspend the affected course immediately?'))) return;
         await patch(`/api/admin/complaints/${f.dataset.complaint}`, v); toast('Saved.', 'success'); reload();
       });
+      handle('#focus', async (f, v) => { await put('/api/admin/focus', { specialty: v.specialty }); toast(v.specialty ? 'Launch focus applied.' : 'Whole catalogue is public now.', 'success'); const { loadSession } = await import('../store.js'); await loadSession(); reload(); });
       handle('#new-spec', async (f, v) => { await post('/api/admin/specialties', v); toast('Specialty added.', 'success'); reload(); });
       handle('#new-prov', async (f, v) => { await post('/api/admin/providers', v); toast('Provider added.', 'success'); reload(); });
     },

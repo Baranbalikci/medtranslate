@@ -13,7 +13,7 @@ export default {
         <div>
           <span class="eyebrow">Partner With Us</span>
           <h1 style="margin-top:12px">Your courses. <span class="grad-text">Every language.</span></h1>
-          <p class="lead">Medical education providers, universities and specialist societies: make your existing video courses accessible to clinicians worldwide — without re-recording a single lecture.</p>
+          <p class="lead">Medical education providers, universities and specialist societies: make your existing video courses accessible to clinicians worldwide — without re-recording a single lecture. We are building our first catalogue in <b>emergency medicine</b>.</p>
           <div class="hero-actions"><a href="#inquiry" class="btn btn-accent btn-lg">Start a conversation</a><a href="#how" class="btn btn-glass btn-lg">How it works</a></div>
         </div>
         <div class="grid-2" style="gap:14px">

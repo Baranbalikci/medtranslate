@@ -1,7 +1,7 @@
 import { get, all, run, tx, audit, parseJson } from '../db.js';
 import { hashPassword, verifyPassword, verifyAgainstDummy, validatePassword, createSession, destroySession, publicUser } from '../auth.js';
 import { LANGUAGE_CODES, COUNTRY_CODES, PROFESSIONS } from '../languages.js';
-import { courseCard, loadCourseById } from '../catalog.js';
+import { courseCard, loadCourseById, isPubliclyVisible } from '../catalog.js';
 import { cancelProviderSubscription } from '../services/payments.js';
 import { HttpError, bad, str, email, rateLimit } from '../http.js';
 
@@ -82,10 +82,10 @@ export function registerAccountRoutes(r) {
       .map((p) => {
         const c = loadCourseById(p.course_id);
         return { course: courseCard(c, ctx.user), percent: p.percent, position: p.position_sec, startedAt: p.started_at,
-          updatedAt: p.updated_at, completedAt: p.completed_at, lastLanguage: p.last_language, available: c.status === 'published' };
+          updatedAt: p.updated_at, completedAt: p.completed_at, lastLanguage: p.last_language, available: isPubliclyVisible(c) };
       });
     const saved = all('SELECT course_id FROM saved_courses WHERE user_id = ? ORDER BY created_at DESC', uid)
-      .map((s) => loadCourseById(s.course_id)).filter((c) => c && c.status === 'published').map((c) => courseCard(c, ctx.user));
+      .map((s) => loadCourseById(s.course_id))  .filter((c) => isPubliclyVisible(c)).map((c) => courseCard(c, ctx.user));
     const certificates = all(`SELECT ce.id, ce.kind, ce.issued_at, ce.credit_amount, ce.credit_type, ce.language, c.title, c.slug
         FROM certificates ce JOIN courses c ON c.id = ce.course_id WHERE ce.user_id = ? ORDER BY ce.issued_at DESC`, uid);
     const subscription = get(`SELECT s.*, p.name AS plan_name, p.code AS plan_code, p.interval FROM subscriptions s JOIN plans p ON p.id = s.plan_id

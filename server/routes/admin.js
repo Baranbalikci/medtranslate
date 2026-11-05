@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { get, all, run, tx, audit, parseJson } from '../db.js';
+import { get, all, run, tx, audit, parseJson, setSetting } from '../db.js';
 import { config } from '../config.js';
 import { LANGUAGE_CODES, COUNTRY_CODES } from '../languages.js';
+import { launchFocus } from '../catalog.js';
 import { loadCourseById } from '../catalog.js';
 import {
   RIGHTS, licenseFor, accreditationFor, publishBlockers, translationReleaseBlockers, licenseBlockers, accreditationBlockers,
@@ -351,7 +352,19 @@ export function registerAdminRoutes(r) {
   r.get('/api/admin/taxonomy', () => ({
     specialties: all('SELECT * FROM specialties ORDER BY name'),
     providers: all('SELECT * FROM providers ORDER BY name'),
+    focus: launchFocus(),
+    focusLocked: process.env.LAUNCH_FOCUS !== undefined,
   }), STAFF);
+  // Launch focus: which specialty is public. Empty = the whole catalogue.
+  r.put('/api/admin/focus', async (ctx) => {
+    if (process.env.LAUNCH_FOCUS !== undefined) throw bad('The launch focus is fixed by the LAUNCH_FOCUS environment variable.');
+    const b = await ctx.json();
+    const slug = b.specialty ? String(b.specialty) : '';
+    if (slug && !get('SELECT 1 FROM specialties WHERE slug = ?', slug)) throw bad('Unknown specialty.');
+    setSetting('launch_focus', slug);
+    audit(ctx.user.id, 'catalogue.focus_changed', 'setting', 'launch_focus', { specialty: slug || null });
+    return { ok: true, focus: slug || null };
+  }, ADMIN);
   r.post('/api/admin/specialties', async (ctx) => {
     const b = await ctx.json();
     const name = str(b.name, { required: true, max: 80, name: 'Name' });

@@ -1,7 +1,7 @@
 // Personal learning calendar: scheduled study sessions per user, with .ics export.
 import { get, all, run, audit } from '../db.js';
 import { config } from '../config.js';
-import { loadCourseById, loadCourseBySlug, courseCard } from '../catalog.js';
+import { loadCourseById, loadCourseBySlug, courseCard, isPubliclyVisible } from '../catalog.js';
 import { bad, notFound, str } from '../http.js';
 
 const AUTH = { auth: true };
@@ -28,7 +28,7 @@ export function registerPlanRoutes(r) {
   r.post('/api/plan', async (ctx) => {
     const b = await ctx.json();
     const c = loadCourseBySlug(String(b.slug || ''));
-    if (!c || c.status !== 'published') throw notFound('Course not found.');
+    if (!isPubliclyVisible(c)) throw notFound('Course not found.');
     if (!WHEN.test(b.startAt || '')) throw bad('Please choose a date and time.');
     const count = get('SELECT COUNT(*) AS n FROM plan_items WHERE user_id = ?', ctx.user.id).n;
     if (count >= 500) throw bad('Your calendar is full. Remove old sessions first.');

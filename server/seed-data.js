@@ -58,7 +58,7 @@ export const COURSES = [
   {
     slug: 'acs-early-ecg-recognition',
     title: 'Acute Coronary Syndrome: Early ECG Recognition',
-    specialty: 'cardiology', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1900,
+    specialty: 'emergency-medicine', extraSpecialty: 'cardiology', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1900,
     published: '2026-09-14', featured: 1, territory: ['*'],
     description: 'A focused module on recognising acute coronary syndrome on the first 12-lead ECG — timing, STEMI criteria, the normal first ECG, and posterior infarction.',
     objectives: ['Record and interpret a 12-lead ECG within 10 minutes of first contact', 'Apply STEMI ECG criteria including lead-specific thresholds', 'Explain why a normal first ECG does not exclude infarction', 'Recognise ECG signs suggesting posterior infarction'],
@@ -148,7 +148,7 @@ export const COURSES = [
   {
     slug: 'stroke-first-60-minutes',
     title: 'Stroke: The First 60 Minutes',
-    specialty: 'neurology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
+    specialty: 'emergency-medicine', extraSpecialty: 'neurology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
     published: '2026-10-02', featured: 1, territory: ['*'],
     description: 'From last-known-well to reperfusion: the essential steps in the first hour of acute ischaemic stroke care.',
     objectives: ['Establish the time last known well', 'Exclude hypoglycaemia as a stroke mimic', 'Choose appropriate urgent imaging', 'Identify candidates for thrombolysis and thrombectomy'],
@@ -384,7 +384,7 @@ export const COURSES = [
   {
     slug: 'chest-xray-systematic-reading',
     title: 'Chest X-Ray: A Systematic Reading Approach',
-    specialty: 'radiology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
+    specialty: 'emergency-medicine', extraSpecialty: 'radiology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
     published: '2026-05-11', territory: ['*'],
     description: 'A reproducible checklist for reading chest radiographs so that important findings are not missed.',
     objectives: ['Check technical quality first', 'Follow a fixed review sequence', 'Revisit review areas for commonly missed findings'],
@@ -434,7 +434,7 @@ export const COURSES = [
   {
     slug: 'rapid-sequence-induction-checklist',
     title: 'Rapid Sequence Induction: A Practical Checklist',
-    specialty: 'anesthesiology', provider: 'kestrel', level: 'advanced', access: 'subscription', price: 1900,
+    specialty: 'emergency-medicine', extraSpecialty: 'anesthesiology', provider: 'kestrel', level: 'advanced', access: 'subscription', price: 1900,
     published: '2026-03-19', territory: ['DE', 'AT', 'CH'],
     description: 'Preparation, preoxygenation and a shared plan for failure — a team-based checklist for rapid sequence induction. (Demo of a regionally restricted licence: DE, AT, CH only.)',
     objectives: ['Prepare team, drugs and equipment', 'Preoxygenate effectively', 'Verbalise a plan for failed intubation'],
@@ -456,7 +456,7 @@ export const COURSES = [
   {
     slug: 'upper-gi-bleeding-initial-management',
     title: 'Upper GI Bleeding: Initial Management',
-    specialty: 'gastroenterology', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1500,
+    specialty: 'emergency-medicine', extraSpecialty: 'gastroenterology', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1500,
     published: '2026-02-26', territory: ['*'],
     description: 'Resuscitation, risk stratification and timing of endoscopy in suspected upper gastrointestinal bleeding.',
     objectives: ['Prioritise resuscitation', 'Use risk scores to guide disposition', 'Coordinate timely endoscopy'],
@@ -478,7 +478,7 @@ export const COURSES = [
   {
     slug: 'red-eye-when-to-refer',
     title: 'The Red Eye: When to Refer',
-    specialty: 'ophthalmology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
+    specialty: 'emergency-medicine', extraSpecialty: 'ophthalmology', provider: 'velmora', level: 'foundation', access: 'free', price: 0,
     published: '2026-01-15', territory: ['*'],
     description: 'Distinguish benign causes of red eye from vision-threatening conditions that need same-day ophthalmology review.',
     objectives: ['Identify red-flag features', 'Recognise vision-threatening diagnoses', 'Decide on urgency of referral'],
@@ -500,7 +500,7 @@ export const COURSES = [
   {
     slug: 'pediatric-fever-without-source',
     title: 'Fever Without a Source in Young Children',
-    specialty: 'pediatrics', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1500,
+    specialty: 'emergency-medicine', extraSpecialty: 'pediatrics', provider: 'northcliff', level: 'intermediate', access: 'subscription', price: 1500,
     published: '2026-11-01', territory: ['*'], draft: true, incompleteLicense: true,
     description: 'Risk assessment of febrile infants and young children without an obvious focus. (Demo of the publishing gate: this course is a draft because its licence lacks the commercial-use right.)',
     objectives: ['Recognise age-specific risk', 'Use traffic-light style assessment', 'Plan safety-netting'],

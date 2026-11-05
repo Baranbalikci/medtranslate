@@ -13,6 +13,7 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerPlanRoutes } from './routes/plan.js';
 import { verifyMediaSignature, resolveMedia, streamFile } from './services/media.js';
 import { all } from './db.js';
+import { loadPublishedCourses } from './catalog.js';
 
 seedIfEmpty();
 purgeExpiredSessions();
@@ -73,8 +74,8 @@ function sitemap() {
   const base = config.publicUrl.replace(/\/$/, '');
   const pages = ['/', '/courses', '/specialties', '/technology', '/pricing', '/partners', '/about', '/faq', '/contact',
     '/legal/impressum', '/legal/datenschutz', '/legal/agb', '/legal/ki-transparenz', '/legal/cme-akkreditierung'];
-  const courses = all("SELECT slug, updated_at FROM courses WHERE status = 'published'");
-  const specialties = all('SELECT slug FROM specialties');
+  const courses = loadPublishedCourses().map((c) => ({ slug: c.slug, updated_at: c.updated_at }));
+  const specialties = [...new Set(loadPublishedCourses().flatMap((c) => [c.specialty_slug, c.specialty2_slug]).filter(Boolean))].map((slug) => ({ slug }));
   const urls = [...pages.map((p) => ({ loc: base + p })), ...specialties.map((s) => ({ loc: `${base}/specialties/${s.slug}` })),
     ...courses.map((c) => ({ loc: `${base}/courses/${c.slug}`, lastmod: c.updated_at.slice(0, 10) }))];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls

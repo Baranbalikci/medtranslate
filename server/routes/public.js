@@ -1,7 +1,7 @@
 import { get, all, run, parseJson, audit } from '../db.js';
 import { config } from '../config.js';
-import { LANGUAGES, COUNTRIES, PROFESSIONS, LANGUAGE_CODES, REGIONS } from '../languages.js';
-import { loadCourseBySlug, loadPublishedCourses, courseCard, courseDetail } from '../catalog.js';
+import { LANGUAGES, COUNTRIES, PROFESSIONS, LANGUAGE_CODES, REGIONS, COUNTRY_LANGS } from '../languages.js';
+import { loadCourseBySlug, loadPublishedCourses, courseCard, courseDetail, launchFocus, isPubliclyVisible } from '../catalog.js';
 import { licenseFor, territoryAllows, entitlement, accreditationFor, availableTracks } from '../compliance.js';
 import { signMediaPath } from '../services/media.js';
 import { translationStatus, translateCues, translateStrings, ProviderNotConnectedError } from '../services/translation.js';
@@ -13,29 +13,33 @@ const LEVELS = ['foundation', 'intermediate', 'advanced'];
 
 function publishedCourseOr404(slug) {
   const c = loadCourseBySlug(slug);
-  if (!c || c.status !== 'published') throw notFound('Course not found.');
+  if (!isPubliclyVisible(c)) throw notFound('Course not found.');
   return c;
 }
 
 export function registerPublicRoutes(r) {
   r.get('/api/meta', async () => {
-    const specialties = all(`SELECT s.slug, s.name, s.description, s.icon,
-        (SELECT COUNT(*) FROM courses c WHERE c.status = 'published' AND (c.specialty_id = s.id OR c.secondary_specialty_id = s.id)) AS course_count
-        FROM specialties s ORDER BY s.name`);
-    const providers = all(`SELECT p.slug, p.name, p.is_demo FROM providers p
-        WHERE EXISTS (SELECT 1 FROM courses c WHERE c.provider_id = p.id AND c.status = 'published') ORDER BY p.name`);
+    const visible = loadPublishedCourses();
+    const focus = launchFocus();
+    const count = (slug) => visible.filter((c) => c.specialty_slug === slug || c.specialty2_slug === slug).length;
+    const specialties = all('SELECT slug, name, description, icon FROM specialties ORDER BY name')
+      .map((x) => ({ ...x, course_count: count(x.slug) }))
+      .filter((x) => !focus || x.course_count > 0);
+    const focusInfo = focus ? (all('SELECT slug, name, description FROM specialties WHERE slug = ?', focus)[0] || null) : null;
+    const usedProviders = new Set(visible.map((c) => c.provider_slug));
+    const providers = all('SELECT p.slug, p.name, p.is_demo FROM providers p ORDER BY p.name').filter((x) => usedProviders.has(x.slug));
     const plans = all('SELECT code, name, interval, price_eur, price_usd, price_gbp, features, highlight FROM plans WHERE active = 1 ORDER BY sort')
       .map((p) => ({ ...p, features: parseJson(p.features, []), highlight: !!p.highlight }));
     // Languages that actually have released content somewhere in the catalogue.
     const live = new Set(['en']);
-    for (const c of loadPublishedCourses()) for (const t of availableTracks(c, licenseFor(c.id))) live.add(t.language);
+    for (const c of visible) for (const t of availableTracks(c, licenseFor(c.id))) live.add(t.language);
     const ai = await translationStatus();
     return {
       languages: LANGUAGES.map((l) => ({ ...l, live: live.has(l.code) })),
       regions: REGIONS.map(([code, name]) => ({ code, name })),
-      countries: COUNTRIES.map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      countries: COUNTRIES.map(([code, name]) => ({ code, name, languages: COUNTRY_LANGS[code] || [] })).sort((a, b) => a.name.localeCompare(b.name)),
       professions: PROFESSIONS,
-      specialties, providers, plans,
+      specialties, providers, plans, focus: focusInfo,
       integrations: {
         aiTranslation: ai,
         payments: { mode: paymentMode() },
@@ -43,9 +47,9 @@ export function registerPublicRoutes(r) {
       },
       policyVersion: config.policyVersion,
       stats: {
-        courses: get("SELECT COUNT(*) AS n FROM courses WHERE status = 'published'").n,
+        courses: visible.length,
         languages: live.size,
-        specialties: specialties.filter((s) => s.course_count > 0).length,
+        specialties: specialties.filter((x) => x.course_count > 0 && x.slug !== focus).length,
       },
     };
   });

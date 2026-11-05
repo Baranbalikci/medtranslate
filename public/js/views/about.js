@@ -8,6 +8,8 @@ export default {
     <section class="section-sm"><div class="container narrow prose">
       <h2>Our mission</h2>
       <p>High-quality continuing medical education is produced every day by universities, specialist societies and education providers — but mostly in a handful of languages. MedTranslate partners with these providers to make their existing video courses accessible in many more languages, using AI for translation, subtitles and voice, and human experts for quality control.</p>
+      <h2>Where we start</h2>
+      <p>We launch with <b>emergency medicine</b>: time-critical topics such as stroke, sepsis, acute coronary syndromes and airway management, where a misunderstood sentence costs the most and where evidence-based pathways travel well across borders. Further specialties follow once the first catalogue is licensed, translated and reviewed.</p>
       <h2>What we stand for</h2>
       <div class="grid-2" style="margin-top:16px">
         ${[

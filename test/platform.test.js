@@ -43,7 +43,8 @@ function client() {
 test('catalogue only lists published courses and released, licensed languages', async () => {
   const c = client();
   const { data } = await c('GET', '/api/courses');
-  assert.ok(data.total >= 9);
+  assert.equal(data.total, 7, 'launch focus: emergency medicine only');
+  assert.ok(data.courses.every((x) => x.specialty.slug === 'emergency-medicine'));
   assert.ok(!data.courses.some((x) => x.slug === 'pediatric-fever-without-source'), 'draft must not be listed');
   const stroke = data.courses.find((x) => x.slug === 'stroke-first-60-minutes');
   assert.equal(stroke.languages.length, 45, 'showcase course: original + 44 sample translations');
@@ -246,4 +247,26 @@ test('course cards tell signed-in users which courses they saved', async () => {
   const { data } = await a('GET', '/api/courses?q=stroke');
   assert.equal(data.courses[0].saved, true);
   assert.equal((await client()('GET', '/api/courses?q=stroke')).data.courses[0].saved, false);
+});
+
+test('launch focus: only emergency medicine is public; admin can widen the catalogue', async () => {
+  const pub = client();
+  assert.equal((await pub('GET', '/api/courses/dermoscopy-pigmented-lesions')).status, 404, 'non-emergency course is not reachable by direct link');
+  const meta = (await pub('GET', '/api/meta')).data;
+  assert.equal(meta.focus.slug, 'emergency-medicine');
+  assert.ok(meta.specialties.some((s) => s.slug === 'neurology' && s.course_count === 1), 'secondary fields appear as topics');
+  assert.ok(!meta.specialties.some((s) => s.slug === 'dermatology'));
+  assert.ok(meta.countries.find((c) => c.code === 'KE').languages.includes('sw'), 'countries list the languages spoken there');
+  const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  assert.ok(sitemap.includes('stroke-first-60-minutes') && !sitemap.includes('dermoscopy'));
+
+  const a = client();
+  await a('POST', '/api/auth/login', { email: 'admin@medtranslate.local', password: 'TestAdmin12345' });
+  assert.ok((await a('GET', '/api/admin/courses')).data.some((c) => c.slug === 'dermoscopy-pigmented-lesions'), 'staff still see every course');
+  assert.equal((await a('PUT', '/api/admin/focus', { specialty: 'no-such' })).status, 400);
+  assert.equal((await a('PUT', '/api/admin/focus', { specialty: '' })).status, 200);
+  assert.equal((await pub('GET', '/api/courses/dermoscopy-pigmented-lesions')).status, 200, 'widened: course is public');
+  assert.equal((await pub('GET', '/api/meta')).data.focus, null);
+  await a('PUT', '/api/admin/focus', { specialty: 'emergency-medicine' });
+  assert.equal((await pub('GET', '/api/courses/dermoscopy-pigmented-lesions')).status, 404);
 });

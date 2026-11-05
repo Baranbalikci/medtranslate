@@ -119,7 +119,8 @@ export default function courseView() {
         const st = (code) => player.langStatus(code);
         const ready = langs.filter((l) => st(l.code) && st(l.code).kind !== 'live');
         const live = langs.filter((l) => st(l.code)?.kind === 'live');
-        sel.innerHTML = String(html`<optgroup label="Ready">${ready.map((l) => html`<option value="${l.code}">${l.native} · ${l.name}</option>`)}</optgroup>
+        const you = player.quickLanguages().map((c) => langs.find((l) => l.code === c)).filter(Boolean);
+        sel.innerHTML = String(html`${you.length ? html`<optgroup label="For you">${you.map((l) => html`<option value="${l.code}">${l.native} · ${l.name}</option>`)}</optgroup>` : ''}<optgroup label="Ready">${ready.map((l) => html`<option value="${l.code}">${l.native} · ${l.name}</option>`)}</optgroup>
           ${state.meta.regions.map((r) => { const list = live.filter((l) => l.region === r.code); return list.length ? html`<optgroup label="${r.name} · live AI">${list.map((l) => html`<option value="${l.code}">${l.native} · ${l.name} ⚡</option>`)}</optgroup>` : ''; })}`);
         sel.value = T.lang;
       }

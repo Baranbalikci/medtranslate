@@ -20,6 +20,7 @@ import { html, icon, esc, fmtTime } from './ui.js';
 import { prefs, state, langInfo } from './store.js';
 import { curPath, ask } from './nav.js';
 import { translateLive } from './live.js';
+import { storedSiteLanguage } from './pagetx.js';
 
 const CPS = { en: 14, de: 13, fr: 14, es: 15, it: 14, pt: 14, tr: 13, nl: 13, pl: 12, ru: 12, uk: 12, ar: 11, hi: 11, zh: 5, ja: 7, ko: 6, id: 13, vi: 12 };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -40,7 +41,7 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     store: new Map(), // lang → { cues, live, status, ctl, listeners:Set }
     audio: { mode: 'original', el: null, token: 0, lastSeek: 0 },
     spokenIdx: -1, lastCueIdx: -2, watched: 0, lastTick: 0, lastReport: 0, destroyed: false, voices: [], idleTimer: null,
-    previewHit: false, liveAck: false, search: '',
+    previewHit: false, liveAck: false, search: '', tab: null, country: null,
   };
 
   root.innerHTML = String(html`
@@ -72,13 +73,15 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
       <div class="p-menu p-langmenu" data-menu="lang" hidden></div>
       <div class="p-menu" data-menu="settings" hidden></div>
       <div class="p-toast"></div>
-    </div>`);
+    </div>
+    <div class="p-langbar" aria-label="Language"></div>`);
 
   const el = root.querySelector('.player');
   const video = el.querySelector('video');
   const q = (s) => el.querySelector(s);
   const subsEl = q('.p-subs'); const tl = q('.p-timeline'); const played = q('.p-played'); const buffer = q('.p-buffer'); const knob = q('.p-knob');
   const hoverT = q('.p-hover-time'); const curEl = q('.cur'); const durEl = q('.dur'); const langMenu = q('[data-menu=lang]'); const setMenu = q('[data-menu=settings]');
+  const bar = root.querySelector('.p-langbar');
   const tts = 'speechSynthesis' in window ? window.speechSynthesis : null;
 
   const flash = (msg) => { const t = q('.p-toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); };
@@ -195,7 +198,8 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     durEl.textContent = ` / ${fmtTime(d.durationSec)}`;
     if (d.previewSec) { const lim = q('.p-preview-limit'); lim.hidden = false; lim.style.width = `${100 - (d.previewSec / d.durationSec) * 100}%`; }
     q('.p-marks').innerHTML = chapters.slice(1).map((c) => `<span class="p-chapter-mark" style="left:${(c.start / d.durationSec) * 100}%"></span>`).join('');
-    const wanted = prefs.get('lang', null) || prefs.get('siteLang', null) || d.preferredLanguage || state.user?.preferredLanguage;
+    const wanted = prefs.get('lang', null) || storedSiteLanguage() || d.preferredLanguage || state.user?.preferredLanguage;
+    S.country = pickCountry();
     const st = wanted && langStatus(wanted);
     // Start in the wanted language if it is ready; live languages start only after the viewer confirms.
     const start = st && st.kind !== 'live' ? wanted : originalLang();
@@ -421,30 +425,80 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     el.append(box);
   }
 
-  // ── menus ───────────────────────────────────────────────────────────────
-  function langOption(l) {
-    const st = langStatus(l.code); if (!st) return '';
-    const checked = S.lang === l.code;
-    const badges = st.kind === 'original' ? '<span class="mini">ORIGINAL</span>'
-      : st.kind === 'released' ? `${st.voice === 'file' ? `<span class="mini voice">${icon('volume', 11)} VOICE</span>` : ''}<span class="mini ai">CC</span>`
-      : `<span class="mini live">${icon('zap', 11)} LIVE AI</span>`;
-    return `<button class="opt" role="menuitemradio" aria-checked="${checked}" data-lang="${l.code}" data-search="${esc(`${l.native} ${l.name} ${l.code}`.toLowerCase())}">
-      <span class="tick">${checked ? icon('check', 16) : ''}</span><span class="lname"><b>${esc(l.native)}</b><small>${esc(l.name)}</small></span><span class="meta">${badges}</span></button>`;
+  // ── choosing a language: quick picks, country shortcut, regions ──────────
+  const countriesWithLangs = () => (state.meta?.countries || []).filter((c) => c.languages?.length);
+  function pickCountry() {
+    const valid = (c) => c && countriesWithLangs().some((x) => x.code === c);
+    const loc = (/-([A-Za-z]{2})\b/.exec(navigator.languages?.[0] || navigator.language || '') || [])[1]?.toUpperCase();
+    return [prefs.get('country', null), state.user?.country, loc].find(valid) || null;
   }
+  const countryLangs = () => (countriesWithLangs().find((c) => c.code === S.country)?.languages || []).filter((c) => langStatus(c));
+  /** The few languages this viewer most likely wants: original, site language, local languages, browser languages. */
+  function quickPicks(max = 6) {
+    const out = [];
+    const add = (c) => { if (c && !out.includes(c) && langStatus(c)) out.push(c); };
+    add(originalLang()); add(S.lang); add(storedSiteLanguage());
+    countryLangs().slice(0, 3).forEach(add);
+    (navigator.languages || []).forEach((t) => add(String(t).slice(0, 2).toLowerCase()));
+    // Nothing personal to go on yet: offer widely used languages that have an AI voice in this course.
+    for (const c of ['sw', 'fr', 'es', 'ar', 'pt', 'hi', 'zh', 'de']) if (out.length < 5 && langStatus(c)?.voice === 'file') add(c);
+    return out.slice(0, max);
+  }
+  const regionOf = (code) => (state.meta?.languages || []).find((l) => l.code === code)?.region;
+
+  function badgesFor(st) {
+    if (st.kind === 'original') return '<span class="mini">ORIGINAL</span>';
+    if (st.kind === 'released') return `${st.voice === 'file' ? `<span class="mini voice">${icon('volume', 11)} VOICE</span>` : ''}<span class="mini ai">CC</span>`;
+    return `<span class="mini live">${icon('zap', 11)} LIVE</span>`;
+  }
+  function chip(code) {
+    const l = langInfo(code); const st = langStatus(code); if (!l || !st) return '';
+    return `<button type="button" class="lm-chip ${S.lang === code ? 'on' : ''}" data-lang="${code}" aria-pressed="${S.lang === code}"><b>${esc(l.native)}</b>${badgesFor(st)}</button>`;
+  }
+  function tile(l) {
+    const st = langStatus(l.code); if (!st) return '';
+    return `<button type="button" class="lm-tile ${S.lang === l.code ? 'on' : ''}" role="menuitemradio" aria-checked="${S.lang === l.code}" data-lang="${l.code}">
+      <span class="lname"><b>${esc(l.native)}</b><small>${esc(l.name)}</small></span><span class="meta">${badgesFor(st)}</span></button>`;
+  }
+
+  /** Language bar under the video: one tap for the likely languages. */
+  function renderBar() {
+    if (!S.data || !bar) return;
+    const picks = quickPicks(6);
+    const cur = langStatus(S.lang);
+    const how = !cur ? '' : cur.kind === 'original' ? 'Original audio' : cur.kind === 'live' ? 'Live AI subtitles · original audio' : cur.voice === 'file' ? 'Subtitles + AI voice' : 'Subtitles · original audio';
+    const mini = (c) => { const st = langStatus(c); return st.kind === 'original' ? '' : st.voice === 'file' ? `<i class="b voice" title="AI voice">${icon('volume', 11)}</i>` : st.kind === 'live' ? `<i class="b live" title="Live AI subtitles">${icon('zap', 11)}</i>` : '<i class="b cc" title="AI subtitles">CC</i>'; };
+    bar.innerHTML = `<span class="plb-label">${icon('globe', 15)} Language</span>
+      <div class="plb-chips">${picks.map((c) => `<button type="button" class="plb-chip ${S.lang === c ? 'on' : ''}" data-lang="${c}" aria-pressed="${S.lang === c}"><span>${esc(langInfo(c)?.native || c)}</span>${mini(c)}</button>`).join('')}</div>
+      <button type="button" class="plb-more" data-more>${icon('plus', 14)} All ${state.meta?.languages.length || ''} languages</button>
+      <span class="plb-how">${esc(how)}</span>`;
+  }
+
+  function paintGrid() {
+    const langs = state.meta?.languages || [];
+    const n = S.search.trim().toLowerCase();
+    const voiced = (c) => (langStatus(c)?.voice || 'none') !== 'none';
+    const rank = (l) => ((langStatus(l.code)?.kind === 'original') ? 0 : voiced(l.code) ? 1 : langStatus(l.code)?.kind === 'released' ? 2 : 3);
+    const list = langs.filter((l) => langStatus(l.code) && (n ? `${l.native} ${l.name} ${l.code}`.toLowerCase().includes(n) : l.region === S.tab))
+      .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+    langMenu.querySelector('.lm-grid').innerHTML = list.length ? list.map(tile).join('') : '<p class="note" style="grid-column:1/-1">No language found. Try another spelling.</p>';
+    langMenu.classList.toggle('searching', !!n);
+  }
+
   function renderMenus() {
     if (!S.data) return;
+    renderBar();
     const langs = state.meta?.languages || [];
     const regions = state.meta?.regions || [];
-    const voiced = (c) => (langStatus(c)?.voice || 'none') !== 'none';
-    const ready = langs.filter((l) => { const st = langStatus(l.code); return st && st.kind !== 'live'; })
-      .sort((a, b) => (langStatus(a.code).kind === 'original' ? -1 : 0) - (langStatus(b.code).kind === 'original' ? -1 : 0) || voiced(b.code) - voiced(a.code) || a.name.localeCompare(b.name));
-    const rest = langs.filter((l) => langStatus(l.code)?.kind === 'live');
+    S.tab ||= regionOf(S.lang) || regionOf(countryLangs()[0]) || 'africa';
     const e = S.store.get(S.lang);
-    const keepScroll = langMenu.querySelector('.lm-list')?.scrollTop || 0;
+    const keepScroll = langMenu.querySelector('.lm-scroll')?.scrollTop || 0;
+    const quick = quickPicks(8);
+    const cl = countryLangs();
+    const regionCount = (r) => langs.filter((l) => l.region === r && langStatus(l.code)).length;
     langMenu.innerHTML = `
       <div class="lm-head">
-        <div class="lm-title">${icon('globe', 16)} <b>Language</b><span class="lm-count">${ready.length + rest.length} languages</span></div>
-        <input class="lm-search" type="search" placeholder="Search a language…" value="${esc(S.search)}" aria-label="Search languages">
+        <div class="lm-title">${icon('globe', 16)} <b>Language</b><span class="lm-count">${langs.length} languages</span></div>
         <div class="lm-toggles">
           <button data-toggle="subs" aria-pressed="${S.subsOn}">${icon('cc', 14)} Subtitles ${S.subsOn ? 'on' : 'off'}</button>
           <div class="seg-mini" role="group" aria-label="Voice">
@@ -454,17 +508,19 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
         </div>
         ${e?.live && e.status === 'error' ? `<p class="note err">${esc(e.error)}</p>` : ''}
       </div>
-      <div class="lm-list">
-        <h4>${icon('volume', 12)} Ready now</h4>
-        ${ready.map(langOption).join('')}
-        ${regions.map((r) => {
-          const list = rest.filter((l) => l.region === r.code);
-          return list.length ? `<h4>${icon('zap', 12)} ${esc(r.name)} · live AI</h4>${list.map(langOption).join('')}` : '';
-        }).join('')}
-        <p class="note">${icon('volume', 11)} VOICE: AI voice track synchronised to the speakers. CC: AI subtitles. ${icon('zap', 11)} LIVE AI: translated in real time while you watch (not reviewed); the original audio keeps playing unless you switch on the device voice in settings.</p>
+      <div class="lm-scroll">
+        <section class="lm-sec lm-quick"><h4>Quick pick</h4><div class="lm-chips">${quick.map(chip).join('')}</div></section>
+        <section class="lm-sec lm-country"><h4>Spoken in
+          <select data-country aria-label="Your country"><option value="">choose your country…</option>${countriesWithLangs().map((c) => `<option value="${c.code}" ${S.country === c.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></h4>
+          ${cl.length ? `<div class="lm-chips">${cl.map(chip).join('')}</div>` : '<p class="note">Pick a country to see the languages people speak there.</p>'}</section>
+        <section class="lm-sec lm-browse"><div class="lm-bh"><h4>Browse by region</h4>
+          <label class="lm-s">${icon('search', 14)}<input class="lm-search" type="search" placeholder="Search all languages" value="${esc(S.search)}" aria-label="Search languages"></label></div>
+          <div class="lm-tabs" role="tablist">${regions.map((r) => `<button type="button" role="tab" data-region="${r.code}" aria-selected="${S.tab === r.code}">${esc(r.name.replace('Middle East & North Africa', 'Middle East'))}<i>${regionCount(r.code)}</i></button>`).join('')}</div>
+          <div class="lm-grid"></div></section>
+        <p class="note">${icon('volume', 11)} VOICE: AI voice track in sync with the speakers · CC: AI subtitles · ${icon('zap', 11)} LIVE: translated in real time while you watch (not reviewed) — the original audio keeps playing unless you switch on the device voice in settings.</p>
       </div>`;
-    const list = langMenu.querySelector('.lm-list'); if (list) list.scrollTop = keepScroll;
-    filterLangs();
+    paintGrid();
+    const sc = langMenu.querySelector('.lm-scroll'); if (sc) sc.scrollTop = keepScroll;
     const seg = (name, cur, items) => `<div class="seg" role="group">${items.map(([v, l]) => `<button data-set="${name}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join('')}</div>`;
     setMenu.innerHTML = `
       <h4>Playback speed</h4>${seg('rate', S.rate, [[0.75, '0.75×'], [1, '1×'], [1.25, '1.25×'], [1.5, '1.5×'], [2, '2×']])}
@@ -475,21 +531,12 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
       <p class="note">Reads subtitles aloud with your device's own voice when a language has no AI voice track. Availability and quality depend on your device.</p>
       <p class="note">Shortcuts: Space/K play · J/L ±10 s · ←/→ ±5 s · M mute · C subtitles · F fullscreen</p>`;
   }
-  function filterLangs() {
-    const n = S.search.trim().toLowerCase();
-    langMenu.querySelectorAll('.lm-list .opt').forEach((o) => { o.hidden = !!n && !o.dataset.search.includes(n); });
-    langMenu.querySelectorAll('.lm-list h4').forEach((h) => {
-      let sib = h.nextElementSibling; let any = false;
-      while (sib && sib.tagName !== 'H4' && sib.tagName !== 'P') { if (!sib.hidden) any = true; sib = sib.nextElementSibling; }
-      h.hidden = !any;
-    });
-  }
   function toggleMenu(name, open) {
     for (const m of [langMenu, setMenu]) {
       const show = m.dataset.menu === name && (open ?? m.hidden);
       m.hidden = !show;
       q(`[data-a=${m.dataset.menu}]`).setAttribute('aria-expanded', String(show));
-      if (show && m === langMenu) { renderMenus(); setTimeout(() => langMenu.querySelector('[aria-checked=true]')?.scrollIntoView({ block: 'center' }), 0); }
+      if (show && m === langMenu) { S.search = ''; S.tab = regionOf(S.lang) || S.tab; renderMenus(); }
     }
   }
 
@@ -509,9 +556,15 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
   }
 
-  el.addEventListener('input', (e) => { if (e.target.matches('.lm-search')) { S.search = e.target.value; filterLangs(); } });
+  el.addEventListener('input', (e) => { if (e.target.matches('.lm-search')) { S.search = e.target.value; paintGrid(); } });
+  el.addEventListener('change', (e) => { if (e.target.matches('[data-country]')) { S.country = e.target.value || null; prefs.set('country', S.country); renderMenus(); } });
+  bar?.addEventListener('click', async (e) => {
+    const l = e.target.closest('[data-lang]');
+    if (l) { await setLanguage(l.dataset.lang); return; }
+    if (e.target.closest('[data-more]')) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true }); toggleMenu('lang', true); }
+  });
   el.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-a],[data-lang],[data-set],[data-toggle],[data-voice]');
+    const b = e.target.closest('[data-a],[data-lang],[data-set],[data-toggle],[data-voice],[data-region]');
     if (!b) {
       if (e.target.closest('.p-menu')) return;
       if (e.target === video || e.target.closest('.p-overlay') || e.target.closest('.p-subs')) {
@@ -528,7 +581,8 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     else if (a === 'fs') toggleFs();
     else if (a === 'cc') { S.subsOn = !S.subsOn; prefs.set('subsOn', S.subsOn); applySubStyle(); renderMenus(); flash(S.subsOn ? 'Subtitles on' : 'Subtitles off'); }
     else if (a === 'lang' || a === 'settings') toggleMenu(a);
-    else if (b.dataset.lang) await setLanguage(b.dataset.lang);
+    else if (b.dataset.region) { S.tab = b.dataset.region; S.search = ''; renderMenus(); }
+    else if (b.dataset.lang) { toggleMenu(null, false); await setLanguage(b.dataset.lang); }
     else if (b.dataset.toggle === 'subs') { S.subsOn = !S.subsOn; prefs.set('subsOn', S.subsOn); applySubStyle(); renderMenus(); }
     else if (b.dataset.voice) {
       S.voice = b.dataset.voice; prefs.set('voice', S.voice); await applyAudio(); renderMenus();
@@ -627,6 +681,7 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     seek(t) { video.currentTime = t; if (video.paused) video.play().catch(() => {}); el.focus({ preventScroll: true }); },
     setLanguage: (code) => setLanguage(code),
     getCues,
+    quickLanguages: () => (S.data ? quickPicks(6) : []),
     langStatus: (code) => (S.data ? langStatus(code) : null),
     get language() { return S.lang; },
     get originalLanguage() { return S.data ? originalLang() : null; },

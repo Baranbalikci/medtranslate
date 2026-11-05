@@ -81,8 +81,24 @@ export const COUNTRIES = [
   ['KE', 'Kenya'], ['TZ', 'Tanzania'], ['UG', 'Uganda'], ['ET', 'Ethiopia'], ['GH', 'Ghana'], ['RW', 'Rwanda'],
   ['SN', 'Senegal'], ['CM', 'Cameroon'], ['CI', "Côte d'Ivoire"], ['CD', 'DR Congo'], ['MZ', 'Mozambique'], ['AO', 'Angola'],
   ['ZM', 'Zambia'], ['ZW', 'Zimbabwe'], ['MW', 'Malawi'], ['SO', 'Somalia'], ['SD', 'Sudan'], ['TN', 'Tunisia'], ['DZ', 'Algeria'],
+  ['PE', 'Peru'], ['BO', 'Bolivia'], ['PY', 'Paraguay'], ['HT', 'Haiti'], ['PK', 'Pakistan'], ['BD', 'Bangladesh'], ['NP', 'Nepal'], ['MM', 'Myanmar'],
+  ['PH', 'Philippines'], ['TH', 'Thailand'], ['MY', 'Malaysia'], ['IR', 'Iran'], ['RO', 'Romania'], ['RU', 'Russia'], ['MG', 'Madagascar'], ['BW', 'Botswana'], ['ER', 'Eritrea'],
 ];
 export const COUNTRY_CODES = new Set(COUNTRIES.map((c) => c[0]));
+
+// Languages people actually speak in each country (first = most widespread). Drives the
+// "spoken in your country" shortcut in the player's language picker.
+export const COUNTRY_LANGS = {
+  KE: ['sw', 'en'], TZ: ['sw', 'en'], UG: ['sw', 'en'], RW: ['rw', 'sw', 'fr', 'en'], ET: ['am', 'om', 'ti', 'so', 'en'], ER: ['ti', 'ar', 'en'], SO: ['so', 'ar'],
+  NG: ['ha', 'yo', 'ig', 'en'], GH: ['ak', 'en'], SN: ['wo', 'fr'], CI: ['fr'], CM: ['fr', 'en'], CD: ['ln', 'sw', 'fr'], AO: ['pt'], MZ: ['pt', 'sw'],
+  ZM: ['ny', 'en'], ZW: ['sn', 'en'], MW: ['ny', 'en'], MG: ['mg', 'fr'], BW: ['tn', 'en'], ZA: ['zu', 'xh', 'af', 'tn', 'en'],
+  EG: ['ar'], SD: ['ar', 'en'], TN: ['ar', 'fr'], DZ: ['ar', 'fr'], MA: ['ar', 'fr'], SA: ['ar'], AE: ['ar', 'en'], TR: ['tr', 'ku'], IR: ['fa', 'ku'],
+  PE: ['qu', 'ay', 'es'], BO: ['qu', 'ay', 'gn', 'es'], PY: ['gn', 'es'], HT: ['ht', 'fr'], BR: ['pt'], MX: ['es'], CO: ['es'], AR: ['es'],
+  IN: ['hi', 'bn', 'ta', 'ur', 'en'], PK: ['ur', 'en'], BD: ['bn'], NP: ['ne', 'en'], MM: ['my'], TH: ['th'], VN: ['vi'], ID: ['id'], MY: ['ms', 'en'], PH: ['tl', 'en'],
+  CN: ['zh'], JP: ['ja'], KR: ['ko'],
+  DE: ['de'], AT: ['de'], CH: ['de', 'fr', 'it'], FR: ['fr'], ES: ['es'], IT: ['it'], PT: ['pt'], NL: ['nl'], BE: ['nl', 'fr'], PL: ['pl'], RO: ['ro'], GR: ['el'],
+  UA: ['uk', 'ru'], RU: ['ru'], GB: ['en'], IE: ['en'], US: ['en', 'es'], CA: ['en', 'fr'], AU: ['en'], SE: ['en'], NO: ['en'], DK: ['en'], FI: ['en'], CZ: ['en'],
+};
 
 export const PROFESSIONS = [
   'Physician', 'Resident / physician in training', 'Medical student', 'Nurse', 'Advanced practice provider',

@@ -1,5 +1,5 @@
 import { get, run, tx, audit, parseJson } from '../db.js';
-import { loadCourseBySlug } from '../catalog.js';
+import { loadCourseBySlug, isPubliclyVisible } from '../catalog.js';
 import { createCheckout, paymentMode, taxFor, verifyStripeSignature, cancelProviderSubscription } from '../services/payments.js';
 import { readBody, bad, str, email, oneOf, rateLimit, HttpError } from '../http.js';
 
@@ -153,7 +153,7 @@ function resolveItem(q, currency) {
   }
   if (q.course) {
     const course = loadCourseBySlug(String(q.course));
-    if (!course || course.status !== 'published' || course.access === 'free' || !course.price_cents) throw bad('This course cannot be purchased individually.');
+    if (!isPubliclyVisible(course) || course.access === 'free' || !course.price_cents) throw bad('This course cannot be purchased individually.');
     // Single-course prices are stored in EUR; other currencies use a fixed, admin-visible conversion.
     const rate = { EUR: 1, USD: 1.1, GBP: 0.87 }[currency];
     return { kind: 'course', ref: course.slug, name: course.title, amount: currency === 'EUR' ? course.price_cents : Math.round((course.price_cents * rate) / 100) * 100 - 1, course };
