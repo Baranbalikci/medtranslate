@@ -10,6 +10,7 @@ import { registerPublicRoutes } from './routes/public.js';
 import { registerAccountRoutes } from './routes/account.js';
 import { registerCommerceRoutes } from './routes/commerce.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerPlanRoutes } from './routes/plan.js';
 import { verifyMediaSignature, resolveMedia, streamFile } from './services/media.js';
 import { all } from './db.js';
 
@@ -22,6 +23,7 @@ registerPublicRoutes(router);
 registerAccountRoutes(router);
 registerCommerceRoutes(router);
 registerAdminRoutes(router);
+registerPlanRoutes(router);
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy': [

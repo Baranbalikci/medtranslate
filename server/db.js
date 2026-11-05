@@ -311,6 +311,17 @@ CREATE TABLE IF NOT EXISTS ui_translation_cache (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (language, source_hash)
 );
+CREATE TABLE IF NOT EXISTS plan_items (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  start_at TEXT NOT NULL,            -- floating local time, YYYY-MM-DDTHH:MM
+  minutes INTEGER NOT NULL DEFAULT 30,
+  note TEXT,
+  done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_plan_user ON plan_items(user_id, start_at);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

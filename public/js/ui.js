@@ -69,6 +69,13 @@ const P = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  chevronL: '<path d="M15 6l-6 6 6 6"/>',
+  chevronR: '<path d="M9 6l6 6-6 6"/>',
+  filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
 };
 export const icon = (name, size = 20, cls = '') => raw(`<svg class="i ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.info}</svg>`);
 
@@ -104,8 +111,18 @@ export function accreditationBadge(acc, compact = false) {
   return html`<span class="badge badge-neutral" title="${acc.label}">No CME credits</span>`;
 }
 
+const voiceCount = (c) => (c.audioLanguages || []).length;
+
+function cardActions(c) {
+  return html`<div class="cc-actions">
+    <button type="button" class="cc-btn ${c.saved ? 'on' : ''}" data-save-course="${c.slug}" aria-pressed="${c.saved ? 'true' : 'false'}" aria-label="${c.saved ? 'Remove from saved' : 'Save course'}" title="Save">${icon(c.saved ? 'bookmarkFill' : 'bookmark', 16)}</button>
+    <button type="button" class="cc-btn" data-plan-course="${c.slug}" aria-label="Add to my learning calendar" title="Add to calendar">${icon('calendar', 16)}</button>
+  </div>`;
+}
+
 export function courseCard(c, languages) {
-  return html`<article class="course-card">
+  const v = voiceCount(c);
+  return html`<article class="course-card" data-slug="${c.slug}">
     <a href="/courses/${c.slug}" class="course-card-link" aria-label="${c.title}">
       <div class="course-thumb">
         ${c.poster ? html`<img src="${c.poster}" alt="" loading="lazy" decoding="async">` : ''}
@@ -122,7 +139,7 @@ export function courseCard(c, languages) {
         <p class="course-desc">${c.description}</p>
         <div class="course-provider">${c.provider.name}</div>
         <div class="course-foot">
-          ${langChips(c.languages, languages)}
+          <div class="cc-langs"><span class="cc-count">${icon('globe', 13)} ${c.languages.length}</span>${v ? html`<span class="cc-count voice">${icon('volume', 13)} ${v}</span>` : ''}</div>
           <div class="course-access">${c.access === 'free' ? html`<span class="price free">Free</span>` : html`<span class="price">Included in plan</span>`}</div>
         </div>
         <div class="course-foot2">
@@ -131,6 +148,29 @@ export function courseCard(c, languages) {
         </div>
       </div>
     </a>
+    ${cardActions(c)}
+  </article>`;
+}
+
+/** Wide row for the list view. */
+export function courseRow(c, languages) {
+  const v = voiceCount(c);
+  return html`<article class="course-row" data-slug="${c.slug}">
+    <a href="/courses/${c.slug}" class="cr-link" aria-label="${c.title}">
+      <div class="cr-thumb">${c.poster ? html`<img src="${c.poster}" alt="" loading="lazy" decoding="async">` : ''}<span class="course-duration">${icon('clock', 13)} ${fmtDuration(c.durationSec)}</span><span class="thumb-play">${icon('play', 18)}</span></div>
+      <div class="cr-main">
+        <div class="course-meta-top"><span class="eyebrow">${c.specialty?.name || 'General'}</span><span class="level level-${c.level}">${levelLabel[c.level]}</span>${c.isDemo ? html`<span class="badge badge-warn">Demo</span>` : ''}</div>
+        <h3 class="course-title">${c.title}</h3>
+        <p class="course-desc">${c.description}</p>
+        <div class="cr-meta"><span>${icon('building', 14)} ${c.provider.name}</span><span>${icon('globe', 14)} ${c.languages.length} languages</span>${v ? html`<span class="voice">${icon('volume', 14)} ${v} AI voices</span>` : ''}<span>${icon('calendar', 14)} ${fmtDate(c.releaseDate)}</span></div>
+      </div>
+      <div class="cr-side">
+        ${accreditationBadge(c.accreditation, true)}
+        ${c.access === 'free' ? html`<span class="price free">Free</span>` : html`<span class="price">Included in plan</span>`}
+        <span class="btn btn-primary btn-sm cr-open">Open ${icon('arrow', 14)}</span>
+      </div>
+    </a>
+    ${cardActions(c)}
   </article>`;
 }
 

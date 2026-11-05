@@ -13,7 +13,8 @@ let mem = null;
 function load() {
   if (mem) return mem;
   try { mem = JSON.parse(localStorage.getItem(KEY)); } catch { mem = null; }
-  mem ||= { users: [], session: null, progress: {}, saved: {}, subs: {}, purchases: {}, invoices: {}, certs: {}, seq: 1 };
+  mem ||= { users: [], session: null, progress: {}, saved: {}, subs: {}, purchases: {}, invoices: {}, certs: {}, plan: {}, seq: 1 };
+  mem.plan ||= {};
   return mem;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch { /* storage unavailable: keep in memory */ } }
@@ -35,7 +36,7 @@ function entitlement(c, u) {
   return { full: false, reason: 'subscription_required' };
 }
 const previewLimit = (c) => Math.min(Math.round(c.durationSec * 0.3), 120);
-function card(c, u) { const { cues, tracks, objectives, chapters, speakers, licenseSummary, ...rest } = c; return { ...rest, availableInYourCountry: territoryOk(c, u) }; }
+function card(c, u) { const { cues, tracks, objectives, chapters, speakers, licenseSummary, ...rest } = c; return { ...rest, availableInYourCountry: territoryOk(c, u), saved: !!u && (load().saved[u.id] || []).includes(c.slug) }; }
 
 const videoBlobs = new Map();
 async function mediaUrl(path) {
@@ -206,7 +207,31 @@ async function handle(method, path, body) {
   }
   if (p === '/api/auth/logout') { s.session = null; save(); return { ok: true }; }
 
-  if (!u && (p.startsWith('/api/account') || p.startsWith('/api/checkout') || p.startsWith('/api/subscription'))) err(401, 'Please sign in.');
+  if (!u && (p.startsWith('/api/account') || p.startsWith('/api/checkout') || p.startsWith('/api/subscription') || p.startsWith('/api/plan'))) err(401, 'Please sign in.');
+  if (p.startsWith('/api/plan')) {
+    const list = (s.plan[u.id] ||= []);
+    const WHEN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+    const out = (x) => ({ id: x.id, startAt: x.startAt, minutes: x.minutes, note: x.note || null, done: !!x.done, course: card(course(x.slug), u) });
+    if (method === 'GET' && p === '/api/plan') return { items: [...list].sort((a, b) => a.startAt.localeCompare(b.startAt)).map(out) };
+    if (method === 'POST' && p === '/api/plan') {
+      const c = course(String(body.slug || ''));
+      if (!WHEN.test(body.startAt || '')) err(400, 'Please choose a date and time.');
+      const it = { id: s.seq++, slug: c.slug, startAt: body.startAt, minutes: Math.min(480, Math.max(10, Math.round(Number(body.minutes)) || Math.ceil(c.durationSec / 300) * 5 + 5)), note: String(body.note || '').slice(0, 300), done: 0 };
+      list.push(it); save(); return out(it);
+    }
+    const mm = p.match(/^\/api\/plan\/(\d+)$/);
+    if (mm) {
+      const i = list.findIndex((x) => x.id === Number(mm[1])); if (i < 0) err(404, 'Not found');
+      if (method === 'DELETE') { list.splice(i, 1); save(); return { ok: true }; }
+      if (method === 'PATCH') {
+        if (body.startAt != null) { if (!WHEN.test(body.startAt)) err(400, 'Please choose a date and time.'); list[i].startAt = body.startAt; }
+        if (body.done != null) list[i].done = body.done ? 1 : 0;
+        if (body.note !== undefined) list[i].note = String(body.note || '').slice(0, 300);
+        save(); return out(list[i]);
+      }
+    }
+    err(404, 'This function requires the full server version.');
+  }
   if (p === '/api/account/profile') {
     if (!body.firstName?.trim() || !body.lastName?.trim()) err(400, 'First name and last name are required.');
     Object.assign(u, { firstName: body.firstName.trim(), lastName: body.lastName.trim(), country: body.country || null, preferredLanguage: body.preferredLanguage || 'en', profession: body.profession || null, specialty: body.specialty || null });
@@ -221,7 +246,7 @@ async function handle(method, path, body) {
   if (p === '/api/account' && method === 'DELETE') {
     if (u.pw !== await digest(String(body.password || ''))) err(400, 'Password is incorrect.');
     s.users = s.users.filter((x) => x.id !== u.id);
-    for (const k of ['progress', 'saved', 'subs', 'purchases', 'invoices']) delete s[k][u.id];
+    for (const k of ['progress', 'saved', 'subs', 'purchases', 'invoices', 'plan']) delete s[k][u.id];
     for (const [id, c] of Object.entries(s.certs)) if (c.userId === u.id) delete s.certs[id];
     s.session = null; save(); return { ok: true };
   }

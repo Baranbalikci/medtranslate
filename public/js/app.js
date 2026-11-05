@@ -1,5 +1,6 @@
 import { setSiteLanguage, storedSiteLanguage, openChooser } from './pagetx.js';
 import { initFx } from './fx.js';
+import { bridge } from './bridge.js';
 import { curPath, curSearch, setUrl, STATIC } from './nav.js';
 import { html, icon, $, $$, esc, toast } from './ui.js';
 import { state, loadSession, onChange, saveConsent } from './store.js';
@@ -8,6 +9,7 @@ import { post } from './api.js';
 const routes = [
   ['/', () => import('./views/home.js')],
   ['/courses', () => import('./views/catalog.js')],
+  ['/planner', () => import('./views/planner.js')],
   ['/courses/:slug', () => import('./views/course.js')],
   ['/specialties', () => import('./views/specialties.js')],
   ['/specialties/:slug', () => import('./views/catalog.js')],
@@ -34,6 +36,7 @@ const routes = [
   return { pattern, re, keys, load };
 });
 
+bridge.navigate = (to, o) => navigate(to, o);
 let cleanup = null;
 let navToken = 0;
 
@@ -93,7 +96,7 @@ async function render({ keepScroll = false } = {}) {
 
 // ── header / footer ─────────────────────────────────────────────────────────
 const NAV = [
-  ['/courses', 'Courses'], ['/specialties', 'Specialties'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
+  ['/courses', 'Courses'], ['/planner', 'Planner'], ['/specialties', 'Specialties'], ['/technology', 'Technology'], ['/pricing', 'Pricing'], ['/partners', 'Partner With Us'],
 ];
 
 function logo() {
@@ -113,7 +116,6 @@ function renderHeader() {
       </nav>
       <div class="header-actions">
         <button type="button" class="lang-switch" data-action="site-lang" aria-label="Website language">${icon('globe', 17)}<span class="code">${state.meta?.languages.find((l) => l.code === (storedSiteLanguage() || 'en'))?.native || 'English'}</span></button>
-        <a href="/courses" class="icon-btn hide-sm" aria-label="Search courses">${icon('search', 19)}</a>
         ${u ? html`
           ${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-sm hide-sm">${icon('shield', 16)} Admin</a>` : ''}
           <a href="/account" class="avatar-btn" aria-label="My account"><span class="avatar">${(u.firstName[0] || '') + (u.lastName[0] || '')}</span></a>`
@@ -209,6 +211,18 @@ function showConsent(force = false) {
 
 // ── global events ───────────────────────────────────────────────────────────
 document.addEventListener('click', (e) => {
+  const sv = e.target.closest('[data-save-course]');
+  if (sv) {
+    e.preventDefault();
+    if (!state.user) { toast('Sign in to save courses.'); return; }
+    post(`/api/courses/${sv.dataset.saveCourse}/save`).then(({ saved }) => {
+      sv.classList.toggle('on', saved); sv.setAttribute('aria-pressed', String(saved)); sv.innerHTML = String(icon(saved ? 'bookmarkFill' : 'bookmark', 16));
+      toast(saved ? 'Saved to your list.' : 'Removed from your list.', 'success');
+    }).catch((err) => toast(err.message, 'error'));
+    return;
+  }
+  const pl = e.target.closest('[data-plan-course]');
+  if (pl) { e.preventDefault(); import('./plan-ui.js').then((m) => m.openPlanDialog(pl.dataset.planCourse)); return; }
   const a = e.target.closest('a[href]');
   if (a && !e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !a.target && !a.hasAttribute('download')) {
     const href = a.getAttribute('href');

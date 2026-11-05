@@ -28,6 +28,7 @@ export function courseCard(c, user) {
     releaseDate: c.release_date, featured: !!c.featured, isDemo: !!c.is_demo,
     territory: license?.right_worldwide ? ['*'] : (license?.territories || []),
     availableInYourCountry: territoryAllows(license, user?.country),
+    saved: user ? !!get('SELECT 1 FROM saved_courses WHERE user_id = ? AND course_id = ?', user.id, c.id) : false,
   };
 }
 

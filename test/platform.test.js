@@ -211,3 +211,39 @@ test('meta lists 53 languages in five regions incl. Africa and the Americas', as
   assert.ok(data.languages.filter((l) => l.region === 'africa').length >= 15);
   assert.ok(['qu', 'gn', 'ay', 'ht'].every((c) => data.languages.some((l) => l.code === c)));
 });
+
+test('learning calendar: plan, move, complete, export, and stay private', async () => {
+  const a = client();
+  await a('POST', '/api/auth/register', { firstName: 'Pia', lastName: 'Plan', email: 'pia@example.org', password: 'Password12345', country: 'DE', acceptTerms: true, confirmProfessional: true });
+  assert.equal((await client()('GET', '/api/plan')).status, 401);
+  const bad = await a('POST', '/api/plan', { slug: 'stroke-first-60-minutes', startAt: 'tomorrow' });
+  assert.equal(bad.status, 400);
+  assert.equal((await a('POST', '/api/plan', { slug: 'no-such-course', startAt: '2030-01-05T18:00' })).status, 404);
+  assert.equal((await a('POST', '/api/plan', { slug: 'pediatric-fever-without-source', startAt: '2030-01-05T18:00' })).status, 404, 'unpublished courses cannot be planned');
+  const made = await a('POST', '/api/plan', { slug: 'stroke-first-60-minutes', startAt: '2030-01-05T18:00', note: 'with team' });
+  assert.equal(made.status, 200);
+  assert.equal(made.data.minutes, 10);
+  const id = made.data.id;
+  assert.equal((await a('PATCH', `/api/plan/${id}`, { startAt: '2030-01-06T07:30' })).data.startAt, '2030-01-06T07:30');
+  assert.equal((await a('PATCH', `/api/plan/${id}`, { done: true })).data.done, true);
+  const ics = await fetch(`${BASE}/api/plan/export.ics`, { headers: { Cookie: (await (async () => { const r = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'medtranslate' }, body: JSON.stringify({ email: 'pia@example.org', password: 'Password12345' }) }); return r.headers.getSetCookie()[0].split(';')[0]; })()) } });
+  assert.match(ics.headers.get('content-type'), /text\/calendar/);
+  assert.equal((await ics.text()).includes('BEGIN:VEVENT'), false, 'completed sessions are not exported');
+  // another user cannot see or change it
+  const o = client();
+  await o('POST', '/api/auth/register', { firstName: 'Otto', lastName: 'Other', email: 'otto@example.org', password: 'Password12345', country: 'DE', acceptTerms: true, confirmProfessional: true });
+  assert.equal((await o('GET', '/api/plan')).data.items.length, 0);
+  assert.equal((await o('PATCH', `/api/plan/${id}`, { done: false })).status, 404);
+  assert.equal((await o('DELETE', `/api/plan/${id}`)).status, 200);
+  assert.equal((await a('GET', '/api/plan')).data.items.length, 1, "other user's delete had no effect");
+  assert.equal((await a('DELETE', `/api/plan/${id}`)).status, 200);
+});
+
+test('course cards tell signed-in users which courses they saved', async () => {
+  const a = client();
+  await a('POST', '/api/auth/register', { firstName: 'Sam', lastName: 'Save', email: 'sam@example.org', password: 'Password12345', country: 'DE', acceptTerms: true, confirmProfessional: true });
+  await a('POST', '/api/courses/stroke-first-60-minutes/save');
+  const { data } = await a('GET', '/api/courses?q=stroke');
+  assert.equal(data.courses[0].saved, true);
+  assert.equal((await client()('GET', '/api/courses?q=stroke')).data.courses[0].saved, false);
+});
