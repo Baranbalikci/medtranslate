@@ -2,6 +2,7 @@
 // transcript in small chunks (starting at the playhead) with Claude and caches
 // the result. Unreviewed machine translation; the UI labels it as such.
 import { api } from './api.js';
+import { liveStart, liveEnd } from './priority.js';
 
 export const liveProvider = 'server';
 
@@ -10,7 +11,9 @@ export const liveProvider = 'server';
  */
 export async function translateLive({ slug, lang, source, from, onCues, signal }) {
   const order = [...source.filter((q) => q.idx >= from), ...source.filter((q) => q.idx < from)];
-  const chunk = 6;
+  const chunk = 4;
+  liveStart();
+  try {
   for (let i = 0; i < order.length; i += chunk) {
     if (signal.aborted) return;
     const start = order[i].idx;
@@ -18,4 +21,5 @@ export async function translateLive({ slug, lang, source, from, onCues, signal }
     if (signal.aborted) return;
     onCues(res.cues.map((c) => ({ idx: c.idx, text: c.text })));
   }
+  } finally { liveEnd(); }
 }

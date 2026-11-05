@@ -50,6 +50,7 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
       <div class="p-top"><span class="p-tag p-tag-lang" hidden></span><span class="p-tag p-tag-demo">DEMO</span></div>
       <div class="p-overlay"><button class="p-bigplay" aria-label="Play">${icon('play', 30)}</button></div>
       <div class="p-loading" hidden><span class="spinner"></span></div>
+      <div class="p-hold" hidden><span class="spinner"></span><span>Translating live… playback continues in a moment</span></div>
       <div class="p-controls">
         <div class="p-timeline" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
           <div class="p-track"><div class="p-buffer"></div><div class="p-preview-limit" hidden></div><div class="p-played"></div><div class="p-marks"></div><div class="p-knob"></div></div>
@@ -101,7 +102,28 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     if (!e) { e = { cues: null, live: false, status: 'idle', listeners: new Set(), promise: null }; S.store.set(lang, e); }
     return e;
   }
-  const emit = (lang) => { const e = entry(lang); for (const fn of e.listeners) fn(e.cues || [], e); if (lang === S.lang) { S.lastCueIdx = -2; renderSubs(true); updateTag(); } };
+  const emit = (lang) => {
+    const e = entry(lang);
+    for (const fn of e.listeners) fn(e.cues || [], e);
+    if (lang === S.lang) { S.lastCueIdx = -2; renderSubs(true); updateTag(); releaseHold(); }
+  };
+
+  // Like buffering: if the sentence being spoken is not translated yet, wait for it
+  // instead of running on without subtitles. Resumes automatically.
+  function shouldHold() {
+    const e = S.store.get(S.lang);
+    if (!e?.live || e.status !== 'translating') return false;
+    const i = cueIndexAt(e.cues, video.currentTime);
+    return i >= 0 && !e.cues[i].text && i !== S.holdSkip;
+  }
+  function holdIfNeeded() {
+    if (S.held || video.paused || !shouldHold()) return;
+    S.held = true; q('.p-hold').hidden = false; video.pause();
+  }
+  function releaseHold() {
+    if (!S.held || shouldHold()) return;
+    S.held = false; q('.p-hold').hidden = true; video.play().catch(() => {});
+  }
 
   async function loadReleased(lang) {
     const e = entry(lang);
@@ -132,7 +154,9 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
       if (e.ctl === ctl) { e.status = 'ready'; emit(lang); }
     } catch (err) {
       if (e.ctl !== ctl) return;
-      e.status = 'error'; e.error = err.message || 'Live translation failed.'; emit(lang);
+      e.status = 'error'; e.error = err.message || 'Live translation failed.';
+      if (S.held && lang === S.lang) { S.held = false; q('.p-hold').hidden = true; video.play().catch(() => {}); }
+      emit(lang);
       if (lang === S.lang) flash(e.error);
     }
     return e.cues;
@@ -362,6 +386,7 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     }
     curEl.textContent = fmtTime(t);
     renderSubs();
+    holdIfNeeded();
     deviceTick();
     if (!video.paused) {
       const now = performance.now();
@@ -561,6 +586,8 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
   // video events — the dubbed track follows the video
   const audioEl = () => (S.audio.mode === 'file' ? S.audio.el : null);
   video.addEventListener('play', () => {
+    // A manual play while waiting for a translation skips the wait for this sentence.
+    if (S.held) { S.held = false; q('.p-hold').hidden = true; const e = S.store.get(S.lang); S.holdSkip = e ? cueIndexAt(e.cues, video.currentTime) : -1; }
     el.classList.add('playing'); q('.p-overlay').hidden = true;
     q('[data-a=play]').innerHTML = String(icon('pause', 20)); q('[data-a=play]').setAttribute('aria-label', 'Pause (k)');
     const a = audioEl(); if (a) { a.currentTime = video.currentTime; a.play().catch(() => {}); }
@@ -568,7 +595,7 @@ export function createPlayer(root, { slug, title, chapters = [], liveAi = null, 
     wake();
   });
   video.addEventListener('pause', () => {
-    el.classList.remove('playing'); el.classList.remove('idle'); q('.p-overlay').hidden = false;
+    el.classList.remove('playing'); el.classList.remove('idle'); q('.p-overlay').hidden = S.held;
     q('[data-a=play]').innerHTML = String(icon('play', 20)); q('[data-a=play]').setAttribute('aria-label', 'Play (k)');
     audioEl()?.pause(); stopSpeech(); report();
   });

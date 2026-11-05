@@ -3,6 +3,7 @@
 // viewer's own Claude account after they allow it). Each translated cue is
 // streamed back as one JSON line and shown as soon as it arrives.
 import { languageName } from './live-langs.js';
+import { liveStart, liveEnd } from './priority.js';
 
 export const liveProvider = 'claude-viewer';
 
@@ -23,10 +24,14 @@ export async function translateLive({ lang, source, from, onCues, signal, course
     e.code = 'unavailable'; throw e;
   }
   const order = [...source.filter((q) => q.idx >= from), ...source.filter((q) => q.idx < from)];
-  // First the sentences at the playhead with the fastest model (subtitles appear within seconds),
-  // then the rest of the lecture with the default model for higher quality.
-  const parts = [order.slice(0, 3), ...Array.from({ length: Math.ceil(Math.max(0, order.length - 3) / 8) }, (_, k) => order.slice(3 + k * 8, 11 + k * 8))];
-  for (const [n, part] of parts.entries()) {
+  // Live means speed: the fast model (no thinking pause) in small packages starting at the
+  // playhead, so each sentence is ready before it is spoken. Website translation waits meanwhile.
+  const parts = [order.slice(0, 2), ...Array.from({ length: Math.ceil(Math.max(0, order.length - 2) / 5) }, (_, k) => order.slice(2 + k * 5, 7 + k * 5))];
+  liveStart();
+  try { await runParts(parts); } finally { liveEnd(); }
+
+  async function runParts(list) {
+  for (const part of list) {
     if (signal.aborted) return;
     if (!part.length) continue;
     const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
@@ -43,7 +48,7 @@ export async function translateLive({ lang, source, from, onCues, signal, course
       if (got.length) onCues(got);
     };
     try {
-      await sample(prompt, { signal, modelTier: n === 0 ? 'quick' : 'default', onText: ({ delta }) => eat(delta) });
+      await sample(prompt, { signal, modelTier: 'quick', cache: { gcTime: 24 * 3600 * 1000 }, onText: ({ delta }) => eat(delta) });
       eat('\n');
     } catch (e) {
       if (e?.code === 'cancelled') return;
@@ -54,5 +59,6 @@ export async function translateLive({ lang, source, from, onCues, signal, course
       }[e?.code] || 'Live translation was interrupted. Please try again.');
       err.code = e?.code; throw err;
     }
+  }
   }
 }

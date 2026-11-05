@@ -949,3 +949,6 @@ button.m-link { width: 100%; background: none; border: 0; border-bottom: 1px sol
 .tx-pill button:hover { background: rgba(255,255,255,.2); }
 .tx-pill .spinner { width: 14px; height: 14px; }
 @media (max-width: 640px) { .lang-switch .code { display: none; } .lang-switch { padding: 0 10px; } }
+
+.p-hold { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px; background: rgba(5,15,34,.85); color: #FDE68A; font-size: .85rem; font-weight: 600; backdrop-filter: blur(6px); }
+.p-hold .spinner { width: 16px; height: 16px; }

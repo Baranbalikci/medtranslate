@@ -3,10 +3,11 @@
 // to date as pages change. Subtitles, transcripts and language names are left
 // alone (they have their own handling). "Show original" restores English.
 import { translateStrings } from './i18n-provider.js';
+import { whenIdle } from './priority.js';
 import { prefs, state } from './store.js';
 import { html, icon, esc } from './ui.js';
 
-const SKIP = 'script,style,noscript,code,pre,.mono,[data-notranslate],.p-subs,.tp-body,.lname,.lm-search,.tv-sub,.tv-langs,.marquee,.africa-langs,.lchip,.lang-pill,.lang-chip,#tx-pill,.tx-chooser,.logo';
+const SKIP = 'script,style,noscript,code,pre,.mono,[data-notranslate],select,.p-tag,.p-toast,.p-time,#tp-status,#tp-note,.p-subs,.tp-body,.lname,.lm-search,.tv-sub,.tv-langs,.marquee,.africa-langs,.lchip,.lang-pill,.lang-chip,#tx-pill,.tx-chooser,.logo';
 const ATTRS = ['placeholder', 'aria-label', 'title'];
 const LETTER = /\p{L}{2,}/u;
 
@@ -18,6 +19,10 @@ let applying = false;
 let pending = 0;
 let busy = 0;
 let failed = null;
+let failedAt = 0;
+let running = false;
+let rerun = false;
+const inflight = new Set();
 let observer = null;
 
 const cacheKey = (l) => `tx:${l}`;
@@ -67,17 +72,29 @@ function apply({ nodes, attrs }) {
 }
 
 async function run() {
+  // One pass at a time; changes during a pass trigger exactly one follow-up pass.
+  if (running) { rerun = true; return; }
+  running = true;
+  try { await pass(); } finally {
+    running = false;
+    if (rerun) { rerun = false; schedule(); }
+  }
+}
+
+async function pass() {
   const found = collect();
   apply(found);
   if (lang === 'en') { renderPill(); return; }
   const need = new Set();
   for (const n of found.nodes) { const k = original.get(n).trim(); if (!dict.has(k)) need.add(k); }
   for (const e of found.attrs) { const o = originalAttr.get(e); for (const a of ATTRS) if (o?.[a] && LETTER.test(o[a]) && !dict.has(o[a].trim())) need.add(o[a].trim()); }
-  const list = [...need].filter((s) => s.length <= 2000);
+  // Never ask twice for the same text, and back off for a minute after an error.
+  if (failed && Date.now() - failedAt < 60000) { renderPill(); return; }
+  const list = [...need].filter((s) => s.length <= 2000 && !inflight.has(s));
   if (!list.length) { renderPill(); return; }
   const batches = [];
   let cur = []; let size = 0;
-  for (const s of list) { if (cur.length >= 45 || size + s.length > 5000) { batches.push(cur); cur = []; size = 0; } cur.push(s); size += s.length; }
+  for (const s of list) { if (cur.length >= 60 || size + s.length > 6000) { batches.push(cur); cur = []; size = 0; } cur.push(s); size += s.length; inflight.add(s); }
   if (cur.length) batches.push(cur);
   const myLang = lang;
   busy += batches.length; failed = null; renderPill();
@@ -86,22 +103,27 @@ async function run() {
     while (batches.length) {
       const b = batches.shift();
       try {
+        await whenIdle(); // live subtitles first
         const out = await translateStrings(myLang, b);
         if (myLang !== lang) return;
         b.forEach((s, i) => { if (out[i]) dict.set(s, out[i]); });
         saveDict();
         apply(collect());
-      } catch (e) { failed = e.message; busy = Math.max(0, busy - batches.length); batches.length = 0; }
-      finally { busy = Math.max(0, busy - 1); renderPill(); }
+      } catch (e) {
+        failed = e.message; failedAt = Date.now();
+        busy = Math.max(0, busy - batches.length);
+        for (const r of batches) for (const s of r) inflight.delete(s);
+        batches.length = 0;
+      } finally { for (const s of b) inflight.delete(s); busy = Math.max(0, busy - 1); renderPill(); }
     }
   };
-  await Promise.all([worker(), worker(), worker()]);
+  await Promise.all([worker(), worker()]);
 }
 
 function schedule() {
   if (applying) return;
   clearTimeout(pending);
-  pending = setTimeout(run, 250);
+  pending = setTimeout(run, 600);
 }
 
 export function siteLanguage() { return lang; }
