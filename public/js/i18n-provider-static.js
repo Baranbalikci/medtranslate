@@ -8,7 +8,7 @@ export async function translateStrings(lang, strings) {
   const sample = await getSample();
   if (!sample) throw Object.assign(new Error('Website translation works when this page is opened inside Claude (claude.ai).'), { code: 'unavailable' });
   const prompt = `Translate the following user-interface strings of a medical education website for healthcare professionals into ${languageName(lang)}.
-Rules: natural, concise UI language for native speakers; keep "MedTranslate", URLs, e-mail addresses, numbers, currencies and units unchanged; keep medical terms accurate and customary abbreviations (CME, CPD, ECG, CT, AI); translate legal text precisely.
+Rules: translate the MEANING, not word by word — write what a native speaker would naturally say in that place on a website (no calques of English phrasing or idioms); concise UI language; keep "MedTranslate", URLs, e-mail addresses, numbers, currencies and units unchanged; keep medical terms accurate and customary abbreviations (CME, CPD, ECG, CT, AI); translate legal text precisely.
 Reply with only a JSON array of exactly ${strings.length} strings, in the same order.
 
 ${JSON.stringify(strings)}`;

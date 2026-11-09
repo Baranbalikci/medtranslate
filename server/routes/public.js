@@ -179,7 +179,10 @@ export function registerPublicRoutes(r) {
     if (missing.length) {
       let out;
       try {
-        out = await translateCues({ cues: missing.map((q) => ({ text: q.text, speaker: q.speaker })), source: c.original_language, target: b.language, courseTitle: c.title });
+        const firstIdx = missing[0].idx; const lastIdx = missing[missing.length - 1].idx;
+        const ctxBefore = all('SELECT text FROM cues WHERE course_id = ? AND idx < ? ORDER BY idx DESC LIMIT 3', c.id, firstIdx).reverse().map((x) => x.text);
+        const ctxAfter = all('SELECT text FROM cues WHERE course_id = ? AND idx > ? ORDER BY idx LIMIT 2', c.id, lastIdx).map((x) => x.text);
+        out = await translateCues({ cues: missing.map((q) => ({ text: q.text, speaker: q.speaker })), source: c.original_language, target: b.language, courseTitle: c.title, context: { before: ctxBefore, after: ctxAfter }, review: false });
       } catch (e) {
         if (e instanceof ProviderNotConnectedError) throw new HttpError(503, 'Live AI translation is not connected on this server (ANTHROPIC_API_KEY missing).');
         throw new HttpError(502, `Live translation failed: ${e.message}`);

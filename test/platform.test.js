@@ -306,3 +306,11 @@ test('planner e-mail reminders: windows, de-duplication, skipped past windows', 
   assert.equal((await u('GET', '/api/plan/prefs')).data.enabled, false, 'unsubscribe link switches reminders off');
   assert.equal((await fetch(`${BASE}/api/plan/unsubscribe?u=${me.id}&t=bad`)).status, 400);
 });
+
+test('translation safety net flags changed numbers (any digit script)', async () => {
+  const { numberMismatches, SYSTEM_PROMPT } = await import('../server/services/translation.js');
+  assert.deepEqual(numberMismatches(['ECG within 10 minutes', 'Give 0.5 mg', 'No numbers'], ['EKG innerhalb von 10 Minuten', 'Gib 5 mg', 'Keine Zahlen']), [1]);
+  assert.deepEqual(numberMismatches(['Within 10 minutes, 2 leads'], ['خلال ١٠ دقائق، ٢ توصيلات']), []);
+  assert.deepEqual(numberMismatches(['Dose 0.5 mg'], ['Dosis 0,5 mg']), [], 'decimal comma is equivalent');
+  assert.ok(/MEANING, not words/.test(SYSTEM_PROMPT));
+});

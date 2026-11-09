@@ -1376,3 +1376,60 @@ html[data-rtl] :is(h1, h2, h3, h4, p, li, summary, dd, td, th, blockquote) { uni
 
 .reel-sec::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 160px; background: linear-gradient(180deg, transparent, var(--bg)); pointer-events: none; }
 .evi-num { white-space: nowrap; }
+
+/* ═══ Brighter, friendlier palette (overrides the earlier dark-navy bands) ═══ */
+:root {
+  --ocean: radial-gradient(1100px 560px at 88% -8%, rgba(103, 232, 249, .42), transparent 62%), radial-gradient(800px 520px at -6% 112%, rgba(251, 191, 36, .14), transparent 60%), linear-gradient(155deg, #0B4C9C 0%, #0A63B0 52%, #0A7BAE 100%);
+  --grad-dark: var(--ocean);
+}
+.story { background: var(--ocean); }
+.africa { background: linear-gradient(160deg, #0A5FA8, #0B7C9E 70%, #0D8A8F); }
+.cat-hero, .pl-hero { background: linear-gradient(160deg, #0B4C9C, #0A6BB4); }
+.topics-head { background: var(--ocean); }
+.site-footer { background: #0B3A74; }
+.hero { background: var(--ocean); }
+.story-step .sn { background: #0A5AA6; }
+.stack-card, .reel-sec { }
+
+/* 1 · stacking cards — light */
+.stack-card { color: var(--text); background: radial-gradient(520px 320px at 92% 0%, color-mix(in srgb, var(--ac) 22%, transparent), transparent 70%), linear-gradient(160deg, #FFFFFF, color-mix(in srgb, var(--ac) 7%, #F4F8FD)); border: 1px solid color-mix(in srgb, var(--ac) 22%, var(--line)); box-shadow: 0 30px 60px -34px color-mix(in srgb, var(--ac) 55%, rgba(11, 22, 40, .4)); filter: brightness(calc(1 - var(--cv) * .06)); }
+.sc-copy h3 { color: var(--ink); } .sc-copy p { color: var(--muted); }
+.sc-copy .ic { background: color-mix(in srgb, var(--ac) 14%, #fff); border-color: color-mix(in srgb, var(--ac) 40%, transparent); }
+.sc-num { -webkit-text-stroke: 1px color-mix(in srgb, var(--ac) 55%, transparent); opacity: .5; }
+.sc-art .hand { stroke: var(--ink); } .sc-art svg { filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--ac) 40%, transparent)); }
+
+/* 2 · evidence — light, warm */
+.pulse { background: linear-gradient(180deg, #FFF7ED 0%, #F1F8FF 55%, var(--bg) 100%); color: var(--text); }
+.pulse h2, .pulse h3 { color: var(--ink); } .pulse .section-head p { color: var(--muted); } .pulse .eyebrow { color: #E11D48; }
+.pulse-line { opacity: .35; } .pulse-line path { filter: none; }
+.evi-card { background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: none; }
+.evi-card:hover { border-color: var(--ac); box-shadow: 0 24px 50px -28px var(--ac); }
+.evi-num { text-shadow: none; } .evi-card p { color: var(--muted); } .evi-card small { color: var(--subtle); border-top-color: var(--line); }
+.evi-note { color: var(--subtle); }
+.cases-h { margin: 56px 0 18px; text-align: center; font-size: clamp(1.3rem, 2.6vw, 1.8rem); }
+.cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.case-card { --ac: #FB7185; position: relative; display: flex; flex-direction: column; gap: 8px; padding: 26px 26px 24px; border-radius: 22px; background: #fff; border: 1px solid var(--line); border-top: 5px solid var(--ac); box-shadow: var(--shadow); }
+.case-card .cc-meta { font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--ac) 70%, #475569); }
+.case-card h4 { margin: 0; font-size: 1.25rem; color: var(--ink); } .case-card b { font-size: .95rem; color: var(--text); } .case-card p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.cases-line { max-width: 640px; margin: 28px auto 0; text-align: center; font-size: 1.05rem; color: var(--text); font-weight: 500; }
+@media (max-width: 900px) { .cases { grid-template-columns: 1fr; } }
+
+/* 3 · topic picker — simple, tappable grid (no scroll hijack) */
+.picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.pick-tile { --ac: #22D3EE; position: relative; display: flex; flex-direction: column; gap: 6px; padding: 22px 20px 20px; min-height: 168px; border-radius: 22px; background: linear-gradient(165deg, #fff, color-mix(in srgb, var(--ac) 10%, #fff)); border: 1px solid color-mix(in srgb, var(--ac) 25%, var(--line)); color: var(--ink); transition: transform .3s var(--ease), box-shadow .3s, border-color .3s; overflow: hidden; }
+.pick-tile::before { content: ""; position: absolute; right: -40px; top: -40px; width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ac) 35%, transparent), transparent); }
+.pick-tile:hover { transform: translateY(-5px); border-color: var(--ac); box-shadow: 0 22px 44px -26px var(--ac); color: var(--ink); }
+.pk-ic { position: relative; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--ac); background: #fff; box-shadow: 0 6px 16px -8px var(--ac); margin-bottom: auto; }
+.pick-tile b { position: relative; font-size: 1.02rem; line-height: 1.25; margin-top: 14px; } .pick-tile small { position: relative; color: var(--muted); }
+.pk-go { position: absolute; right: 16px; bottom: 16px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--ac); color: #fff; transition: transform .3s var(--ease); } .pick-tile:hover .pk-go { transform: translateX(4px); }
+@media (max-width: 960px) { .picker { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .picker { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .pick-tile { min-height: 148px; padding: 18px 16px; } .pick-tile b { font-size: .95rem; } }
+.picker-sec { background: linear-gradient(180deg, var(--bg), #EEF6FF 60%, var(--bg)); }
+
+/* Topics page + cards: friendlier light tiles */
+.topic-tile { background: linear-gradient(165deg, #fff, color-mix(in srgb, var(--ac) 9%, #fff)); border: 1px solid color-mix(in srgb, var(--ac) 25%, var(--line)); color: var(--text); }
+.topic-tile h3 { color: var(--ink); } .topic-tile p { color: var(--muted); } .tt-course { color: var(--text); } .tt-course img { border-color: var(--line); }
+.topic-tile:hover { color: var(--ink); } .tt-ic { background: #fff; box-shadow: 0 6px 16px -8px var(--ac); } .tt-go { color: #fff; } .tt-glow { opacity: .22; }
+.topics-head .lead, .topics-head h1 { color: #fff; }
+.sr-chip.on { background: #fff; }
+.pulse-line { opacity: .2; } .pulse .container { position: relative; z-index: 1; }

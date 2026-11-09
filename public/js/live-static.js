@@ -7,12 +7,14 @@ import { liveStart, liveEnd } from './priority.js';
 
 export const liveProvider = 'claude-viewer';
 
-const RULES = `You translate subtitle cues of a medical education video for physicians and other healthcare professionals.
-Rules:
-- Preserve the medical meaning exactly. Never add, omit, soften or strengthen a clinical statement, number, threshold, dose, unit or time window.
-- Use the professional terminology clinicians in the target language actually use. Keep ECG lead names (V1–V9), units and abbreviations such as ECG, CT, STEMI.
-- One subtitle per cue, similar length to the source.
-Output: one JSON object per line, exactly {"i": <cue index>, "t": "<translation>"}, in the given order, and nothing else.`;
+const RULES = `You are a medical translator and clinician-editor. You translate subtitle cues of a medical education video (emergency medicine) for physicians, nurses and paramedics. The text is also read aloud by a synthetic voice, so it must sound like something a colleague would actually say.
+Translate MEANING, not words:
+- Understand the whole passage first (surrounding cues are given as context), then say each idea the way a fluent native clinician would. Never translate word by word and never copy English sentence structure or idioms; use the natural equivalent in the target language.
+- A cue can be part of a longer sentence: keep it natural on its own and let it connect smoothly with the neighbouring cues.
+- Professional but plain register. If the language has no established term for a concept, use the clearest short description and keep the English/Latin term in brackets; never invent terminology.
+- Clinical accuracy is non-negotiable: never add, omit, soften or strengthen a statement. Numbers, doses, thresholds, units, time windows, negations ("do not", "never", "unless") must keep exactly the same meaning. Re-check every number and negation.
+- Keep ECG leads (V1–V9), units and customary abbreviations (ECG, CT, STEMI, MAP). Similar length to the source (up to ~20% longer is fine).
+Output: one JSON object per line, exactly {"i": <cue index>, "t": "<translation>"}, only for the cues under "Cues", in the given order, and nothing else.`;
 
 let samplePromise = null;
 const getSample = () => (samplePromise ||= (window.claude?.use ? window.claude.use('sample') : Promise.resolve(null)));
@@ -34,7 +36,10 @@ export async function translateLive({ lang, source, from, onCues, signal, course
   for (const part of list) {
     if (signal.aborted) return;
     if (!part.length) continue;
-    const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
+    const first = part[0].idx; const last = part[part.length - 1].idx;
+    const before = source.filter((q) => q.idx < first).slice(-3).map((q) => `- ${q.text}`).join('\n');
+    const after = source.filter((q) => q.idx > last).slice(0, 2).map((q) => `- ${q.text}`).join('\n');
+    const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").${before ? `\n\nContext before (do not translate):\n${before}` : ''}${after ? `\n\nContext after (do not translate):\n${after}` : ''}\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
     let pending = '';
     const eat = (s) => {
       const lines = (pending + s).split('\n');

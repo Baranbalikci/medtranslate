@@ -106,7 +106,17 @@ export default {
             <div class="evi-num"><span data-count="${v}" data-dec="${dec}" data-suffix="${suf}">${txt}${suf}</span></div>
             <h3>${cap}</h3><p>${body}</p><small>${src}</small></article>`)}
         </div>
-        <p class="evi-note reveal">${icon('info', 14)} Published estimates, mostly from high-income health systems: they show the scale of the problem, not a forecast for any single clinic. Individual case reports appear here only with a verifiable, anonymised source. Editorial and legal review is pending before launch.</p>
+        <h3 class="cases-h reveal">Public cases that changed practice</h3>
+        <div class="cases" data-stagger>
+          ${[
+            ['2012 · USA', 'Rory Staunton, 12', 'Sepsis missed in the emergency department', 'Rory died of sepsis a few days after being sent home from an emergency department. According to public reports, abnormal blood results were not acted on in time. His family’s campaign led to “Rory’s Regulations” in New York State (2013), which require hospitals to follow sepsis protocols.', '#FBBF24'],
+            ['2005 · UK', 'Elaine Bromiley, 37', 'A failed airway during a routine operation', 'Elaine died after the team could not secure her airway during a routine operation. The independent review pointed to human factors such as task fixation and communication under stress. Her husband, an airline pilot, founded the Clinical Human Factors Group, which has shaped airway-emergency training and checklists since.', '#38BDF8'],
+            ['1984 · USA', 'Libby Zion, 18', 'Hours after arriving at a hospital', 'Libby died within hours of being admitted through the emergency department of a New York hospital. The cause is still debated, but the case triggered a state inquiry (the Bell Commission) and a lasting reform of supervision and working hours for junior doctors.', '#FB7185'],
+          ].map(([meta, who, what, body, ac]) => html`<article class="case-card" style="--ac:${ac}">
+            <span class="cc-meta">${meta}</span><h4>${who}</h4><b>${what}</b><p>${body}</p></article>`)}
+        </div>
+        <p class="cases-line reveal">These are not isolated tragedies. They are the cases that became public because families and clinicians insisted that something must change.</p>
+        <p class="evi-note reveal">${icon('info', 14)} Published estimates, mostly from high-income health systems: they show the scale of the problem, not a forecast for any single clinic. Case summaries are based on public reports; their wording is pending editorial and legal review before launch.</p>
       </div>
     </section>` : ''}
 
@@ -216,19 +226,20 @@ export default {
       </div>
     </section>
 
-    <section class="reel-sec">
-      <div class="container reel-head">
-        <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Pick the emergency your team faces' : 'Learn across the full breadth of medicine'}</h2><p class="reveal" data-fx="blur">Keep scrolling – the topics slide past.</p></div>
-        <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
+    <section class="section picker-sec">
+      <div class="container">
+        <div class="row between" style="margin-bottom:28px;align-items:flex-end">
+          <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Pick the emergency your team faces' : 'Learn across the full breadth of medicine'}</h2></div>
+          <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
+        </div>
+        <div class="picker" data-stagger>
+          ${(focus ? topics : m.specialties).map((s) => html`<a class="pick-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
+            <span class="pk-ic">${icon(s.icon || 'stethoscope', 28)}</span>
+            <b>${s.name}</b>
+            <small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small>
+            <span class="pk-go">${icon('arrow', 16)}</span></a>`)}
+        </div>
       </div>
-      <div class="hs" data-fx-scroll="hscroll"><div class="hs-sticky"><div class="hs-track">
-        ${(focus ? topics : m.specialties).map((s, k) => html`<a class="reel-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'};--k:${k}">
-          <span class="rt-glow" aria-hidden="true"></span><span class="rt-n">${String(k + 1).padStart(2, '0')}</span>
-          <span class="rt-ic">${icon(s.icon || 'stethoscope', 38)}</span>
-          <h3>${s.name}</h3><p>${s.description || ''}</p>
-          <span class="rt-foot"><b>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</b><span class="rt-go">${icon('arrow', 18)}</span></span></a>`)}
-        <a class="reel-tile reel-end" href="${focus ? '/topics' : '/specialties'}"><h3>All topics</h3><span class="rt-go">${icon('arrow', 22)}</span></a>
-      </div></div></div>
     </section>
 
     <section class="section alt">
