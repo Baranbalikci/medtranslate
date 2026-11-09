@@ -87,38 +87,38 @@ export default {
           </article>`)}
         </div>
       </div>
+    </section>` : ''}
+
+    <section class="section picker-sec">
+      <div class="container">
+        <div class="row between" style="margin-bottom:28px;align-items:flex-end">
+          <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Choose an emergency topic' : 'Learn across the full breadth of medicine'}</h2></div>
+          <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
+        </div>
+        <div class="picker" data-stagger>
+          ${(focus ? topics : m.specialties).map((s) => html`<a class="pick-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
+            <span class="pk-top"><span class="pk-ic">${icon(s.icon || 'stethoscope', 24)}</span><span class="pk-count">${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Soon'}</span></span>
+            <b>${s.name}</b>
+            <small>${s.description || ''}</small>
+            <span class="pk-go">Explore ${icon('arrow', 15)}</span></a>`)}
+          ${focus ? html`<a class="pick-tile pick-more" href="/topics">
+            <span class="pk-top"><span class="pk-ic">${icon('layers', 24)}</span><span class="pk-count">In preparation</span></span>
+            <b>More topics coming</b>
+            <small>${(m.topics || []).filter((t) => !t.course_count).map((t) => t.name).join(' · ') || 'New emergency topics are added as partner courses are licensed.'}</small>
+            <span class="pk-go">See all topics ${icon('arrow', 15)}</span></a>` : ''}
+        </div>
+      </div>
     </section>
 
-    <section class="section pulse" id="evidence" data-fx-scroll="draw">
-      <svg class="pulse-line" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M0 90 H300 l14 -6 l14 6 H420 l10 12 l16 -86 l18 120 l12 -46 H640 q28 -42 56 0 H1200"/></svg>
+    <section class="section alt">
       <div class="container">
-        <div class="section-head center">
-          <span class="eyebrow reveal">The scale of the problem</span>
-          <h2 data-fx="words">Minutes and misread signs decide who goes home.</h2>
-          <p class="reveal" data-fx="blur">Missed or late recognition is not a rare accident. Published studies put numbers on it.</p>
+        <div class="row between" style="margin-bottom:32px;align-items:flex-end">
+          <div class="section-head" style="margin:0"><span class="eyebrow reveal">Course preview</span><h2 data-fx="words">Featured courses</h2><p class="reveal" data-fx="blur">Sample courses to explore the player, AI voices and live translation.</p></div>
+          <a href="/courses" class="btn btn-ghost reveal">All courses ${icon('arrow', 16)}</a>
         </div>
-        <div class="evi-grid" data-stagger>
-          ${[
-            ['1.9', 1.9, 1, ' M', 'million neurons lost every minute', 'An untreated large-vessel stroke can destroy about 1.9 million neurons per minute. Faster recognition means more brain saved.', 'Saver JL. Time is brain – quantified. Stroke 2006;37:263–266.', '#A78BFA'],
-            ['7.6', 7.6, 1, ' %', 'less survival per hour of delay', 'In septic shock, each hour of delay in starting effective antimicrobial treatment was linked to an average 7.6 % lower survival.', 'Kumar A et al. Crit Care Med 2006;34:1589–1596.', '#FBBF24'],
-            ['795', 795, 0, ',000', 'harmed by diagnostic error – every year', 'A US estimate of people who die or are permanently disabled each year because of diagnostic error across care settings.', 'Newman-Toker DE et al. BMJ Qual Saf 2024;33:109–120.', '#FB7185'],
-          ].map(([txt, v, dec, suf, cap, body, src, ac]) => html`<article class="evi-card" style="--ac:${ac}">
-            <div class="evi-num"><span data-count="${v}" data-dec="${dec}" data-suffix="${suf}">${txt}${suf}</span></div>
-            <h3>${cap}</h3><p>${body}</p><small>${src}</small></article>`)}
-        </div>
-        <h3 class="cases-h reveal">Public cases that changed practice</h3>
-        <div class="cases" data-stagger>
-          ${[
-            ['2012 · USA', 'Rory Staunton, 12', 'Sepsis missed in the emergency department', 'Rory died of sepsis a few days after being sent home from an emergency department. According to public reports, abnormal blood results were not acted on in time. His family’s campaign led to “Rory’s Regulations” in New York State (2013), which require hospitals to follow sepsis protocols.', '#FBBF24'],
-            ['2005 · UK', 'Elaine Bromiley, 37', 'A failed airway during a routine operation', 'Elaine died after the team could not secure her airway during a routine operation. The independent review pointed to human factors such as task fixation and communication under stress. Her husband, an airline pilot, founded the Clinical Human Factors Group, which has shaped airway-emergency training and checklists since.', '#38BDF8'],
-            ['1984 · USA', 'Libby Zion, 18', 'Hours after arriving at a hospital', 'Libby died within hours of being admitted through the emergency department of a New York hospital. The cause is still debated, but the case triggered a state inquiry (the Bell Commission) and a lasting reform of supervision and working hours for junior doctors.', '#FB7185'],
-          ].map(([meta, who, what, body, ac]) => html`<article class="case-card" style="--ac:${ac}">
-            <span class="cc-meta">${meta}</span><h4>${who}</h4><b>${what}</b><p>${body}</p></article>`)}
-        </div>
-        <p class="cases-line reveal">These are not isolated tragedies. They are the cases that became public because families and clinicians insisted that something must change.</p>
-        <p class="evi-note reveal">${icon('info', 14)} Published estimates, mostly from high-income health systems: they show the scale of the problem, not a forecast for any single clinic. Case summaries are based on public reports; their wording is pending editorial and legal review before launch.</p>
+        <div id="featured">${skeletonCards(3)}</div>
       </div>
-    </section>` : ''}
+    </section>
 
     <section class="section curtain" id="platform" data-fx-scroll="curtain">
       <div class="container">
@@ -216,31 +216,7 @@ export default {
       </div>
     </section>
 
-    <section class="section alt">
-      <div class="container">
-        <div class="row between" style="margin-bottom:32px;align-items:flex-end">
-          <div class="section-head" style="margin:0"><span class="eyebrow reveal">Course preview</span><h2 data-fx="words">Featured courses</h2><p class="reveal" data-fx="blur">Sample courses to explore the player, AI voices and live translation.</p></div>
-          <a href="/courses" class="btn btn-ghost reveal">All courses ${icon('arrow', 16)}</a>
-        </div>
-        <div id="featured">${skeletonCards(3)}</div>
-      </div>
-    </section>
 
-    <section class="section picker-sec">
-      <div class="container">
-        <div class="row between" style="margin-bottom:28px;align-items:flex-end">
-          <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Pick the emergency your team faces' : 'Learn across the full breadth of medicine'}</h2></div>
-          <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
-        </div>
-        <div class="picker" data-stagger>
-          ${(focus ? topics : m.specialties).map((s) => html`<a class="pick-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
-            <span class="pk-ic">${icon(s.icon || 'stethoscope', 28)}</span>
-            <b>${s.name}</b>
-            <small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small>
-            <span class="pk-go">${icon('arrow', 16)}</span></a>`)}
-        </div>
-      </div>
-    </section>
 
     <section class="section alt">
       <div class="container grid-2" style="align-items:center;gap:56px">
@@ -260,6 +236,38 @@ export default {
         </div>
       </div>
     </section>
+
+    ${focus ? html`<section class="section pulse" id="evidence" data-fx-scroll="draw">
+      <svg class="pulse-line" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M0 90 H300 l14 -6 l14 6 H420 l10 12 l16 -86 l18 120 l12 -46 H640 q28 -42 56 0 H1200"/></svg>
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow reveal">Why this matters</span>
+          <h2 data-fx="words">Where training is missing, patients pay with their lives.</h2>
+          <p class="reveal" data-fx="blur">In many low- and middle-income countries, emergency teams work without current training in a language they understand. A missed diagnosis in the first minutes is not a rare exception there — it is a pattern.</p>
+        </div>
+        <div class="evi-grid" data-stagger>
+          ${[
+            ['5', 5, 0, ' million', 'deaths a year from poor-quality care', 'In low- and middle-income countries, more people die after reaching a health service that gives poor-quality care than from having no access to care at all.', 'Kruk ME et al. Lancet Glob Health 2018;6:e1196–e1252.', '#F87171'],
+            ['1.9', 1.9, 1, ' M', 'neurons lost per minute in stroke', 'An untreated large-vessel stroke destroys about 1.9 million neurons every minute. Recognising it fast is the treatment.', 'Saver JL. Stroke 2006;37:263–266.', '#A78BFA'],
+            ['7.6', 7.6, 1, ' %', 'lower survival per hour of delay', 'In septic shock, every hour before effective antibiotics was linked to about 7.6 % lower survival.', 'Kumar A et al. Crit Care Med 2006;34:1589–1596.', '#FBBF24'],
+          ].map(([txt, v, dec, suf, cap, body, src, ac]) => html`<article class="evi-card" style="--ac:${ac}">
+            <div class="evi-num"><span data-count="${v}" data-dec="${dec}" data-suffix="${suf}">${txt}${suf}</span></div>
+            <h3>${cap}</h3><p>${body}</p><small>${src}</small></article>`)}
+        </div>
+        <h3 class="cases-h reveal">What a missed diagnosis looks like</h3>
+        <div class="cases" data-stagger>
+          ${[
+            ['West Africa', 'Seizures in late pregnancy', 'A 22-year-old woman in her third trimester arrives with seizures. They are treated as epilepsy; her blood pressure is not measured and magnesium sulfate is not given. She dies of eclampsia the same night.', 'Eclampsia remains a leading cause of maternal death in sub-Saharan Africa. Magnesium sulfate is inexpensive and recommended by WHO.', 'WHO recommendations for prevention and treatment of pre-eclampsia and eclampsia, 2011.', '#F87171'],
+            ['East Africa', 'A child with fever', 'A three-year-old with high fever and drowsiness is treated for malaria without a test. The cause is bacterial meningitis. When antibiotics are finally given, it is too late.', 'Severe febrile illness is often labelled “malaria” by default; in one Tanzanian study most patients treated for severe malaria did not have it.', 'Reyburn H et al. BMJ 2004;329:1212.', '#FBBF24'],
+            ['Andean region, South America', 'Chest pain called “gastritis”', 'A 48-year-old man with chest pain at a rural health post is sent home with antacids. No ECG is recorded. He returns two days later in cardiac arrest.', 'Acute coronary syndromes are easily missed where ECG skills and current protocols are not part of everyday training.', 'Illustrative pattern; no single source.', '#38BDF8'],
+          ].map(([where, what, story, why, src, ac]) => html`<article class="case-card" style="--ac:${ac}">
+            <span class="cc-meta">${icon('globe', 13)} ${where} · composite case</span><h4>${what}</h4><p class="cc-story">${story}</p><p class="cc-why">${why}</p><small>${src}</small></article>`)}
+        </div>
+        <p class="cases-line reveal">None of these deaths needed expensive technology to prevent. They needed a team that knew what to look for — taught in a language it understands.</p>
+        <div class="center reveal" style="margin-top:22px"><a href="/courses" class="btn btn-primary">Explore the courses ${icon('arrow', 16)}</a></div>
+        <p class="evi-note reveal">${icon('info', 14)} The three cases are composite illustrations of patterns documented in the cited literature — not records of identifiable patients. Figures are published estimates. Wording is pending medical-editorial and legal review before launch.</p>
+      </div>
+    </section>` : ''}
 
     <section class="section">
       <div class="container">

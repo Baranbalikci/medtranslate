@@ -112,6 +112,7 @@ function renderHeader() {
   const u = state.user;
   $('#header').innerHTML = String(html`
     <div class="container header-inner">
+      <button class="icon-btn menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><span class="burger"><i></i><i></i><i></i></span></button>
       ${logo()}
       <nav class="nav-desktop" aria-label="Main">
         ${navItems().map(([href, label]) => html`<a href="${href}" class="nav-link">${label}</a>`)}
@@ -122,22 +123,41 @@ function renderHeader() {
           ${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-sm hide-sm">${icon('shield', 16)} Admin</a>` : ''}
           <a href="/account" class="avatar-btn" aria-label="My account"><span class="avatar">${(u.firstName[0] || '') + (u.lastName[0] || '')}</span></a>`
         : html`<a href="/login" class="btn btn-ghost btn-sm hide-sm">Sign in</a><a href="/register" class="btn btn-primary btn-sm hide-xs">Get started</a>`}
-        <button class="icon-btn menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">${icon('menu', 22)}</button>
       </div>
     </div>
     `);
-  $('#mobile-host').innerHTML = String(html`    <div class="mobile-menu" id="mobile-menu" hidden>
-      <nav aria-label="Mobile">
-        ${navItems().map(([href, label]) => html`<a href="${href}" class="m-link">${label}${icon('arrow', 18)}</a>`)}
-        <a href="/about" class="m-link">About Us${icon('arrow', 18)}</a>
-        <a href="/faq" class="m-link">FAQ${icon('arrow', 18)}</a>
-        <button type="button" class="m-link" data-action="site-lang">Website language${icon('globe', 18)}</button>
-        <div class="m-actions">
-          ${u ? html`<a href="/account" class="btn btn-primary btn-block">My account</a>${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-block">Admin dashboard</a>` : ''}`
-            : html`<a href="/register" class="btn btn-primary btn-block">Create free account</a><a href="/login" class="btn btn-ghost btn-block">Sign in</a>`}
-        </div>
+  const m = state.meta || {};
+  const topics = (m.focus ? m.topics || [] : m.specialties || []).filter((t) => t.course_count);
+  const tBase = m.focus ? '/topics' : '/specialties';
+  $('#mobile-host').innerHTML = String(html`<div class="drawer" id="mobile-menu" aria-hidden="true">
+    <div class="drawer-scrim" data-close-drawer></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Menu" tabindex="-1">
+      <div class="drawer-head">${logo()}<button type="button" class="icon-btn" data-close-drawer aria-label="Close menu">${icon('close', 22)}</button></div>
+      <nav class="drawer-nav" aria-label="Menu">
+        <p class="dr-label">Learn</p>
+        <a href="/courses" class="dr-link"><span class="dr-ic">${icon('play', 18)}</span><span><b>All courses</b><small>${m.stats?.courses || ''} emergency courses · 50+ languages</small></span></a>
+        <details class="dr-group" open>
+          <summary class="dr-link"><span class="dr-ic">${icon('layers', 18)}</span><span><b>${m.focus ? 'Emergency topics' : 'Specialties'}</b><small>Browse by situation</small></span>${icon('chevron', 16)}</summary>
+          <div class="dr-sub">
+            ${topics.map((t) => html`<a href="${tBase}/${t.slug}" class="dr-topic" style="--ac:${t.accent || '#22D3EE'}"><i></i>${t.name}<em>${t.course_count}</em></a>`)}
+            <a href="${tBase}" class="dr-topic all">All topics ${icon('arrow', 14)}</a>
+          </div>
+        </details>
+        <a href="/planner" class="dr-link"><span class="dr-ic">${icon('calendar', 18)}</span><span><b>Learning calendar</b><small>Plan sessions, get reminders</small></span></a>
+        <p class="dr-label">Platform</p>
+        <a href="/technology" class="dr-link"><span class="dr-ic">${icon('sparkles', 18)}</span><span><b>Technology</b><small>AI subtitles, voice & quality control</small></span></a>
+        <a href="/pricing" class="dr-link"><span class="dr-ic">${icon('award', 18)}</span><span><b>Pricing</b><small>Free courses and plans</small></span></a>
+        <a href="/partners" class="dr-link"><span class="dr-ic">${icon('handshake', 18)}</span><span><b>Partner with us</b><small>For course providers</small></span></a>
+        <p class="dr-label">Company</p>
+        <div class="dr-mini"><a href="/about">About us</a><a href="/faq">FAQ</a><a href="/contact">Contact</a><a href="/legal/ki-transparenz">AI transparency</a></div>
       </nav>
-    </div>`);
+      <div class="drawer-foot">
+        <button type="button" class="btn btn-ghost btn-block" data-action="site-lang">${icon('globe', 17)} Website language</button>
+        ${u ? html`<a href="/account" class="btn btn-primary btn-block">My account</a>${u.role !== 'user' ? html`<a href="/admin" class="btn btn-ghost btn-block">Admin dashboard</a>` : ''}`
+          : html`<a href="/register" class="btn btn-primary btn-block">Create free account</a><a href="/login" class="btn btn-ghost btn-block">Sign in</a>`}
+      </div>
+    </aside>
+  </div>`);
   updateNav();
 }
 
@@ -149,12 +169,16 @@ function updateNav() {
   });
 }
 
-function closeMobileMenu() {
+let drawerReturn = null;
+function setDrawer(open) {
   const m = $('#mobile-menu'); const t = $('.menu-toggle');
-  if (!m || m.hidden) return;
-  m.hidden = true; document.body.classList.remove('menu-open');
-  t?.setAttribute('aria-expanded', 'false'); if (t) t.innerHTML = String(icon('menu', 22));
+  if (!m || m.classList.contains('open') === open) return;
+  m.classList.toggle('open', open); m.setAttribute('aria-hidden', String(!open));
+  document.body.classList.toggle('menu-open', open);
+  t?.setAttribute('aria-expanded', String(open));
+  if (open) { drawerReturn = document.activeElement; setTimeout(() => m.querySelector('.drawer-panel')?.focus(), 30); } else drawerReturn?.focus?.();
 }
+function closeMobileMenu() { setDrawer(false); }
 
 function renderFooter() {
   $('#footer').innerHTML = String(html`
@@ -236,12 +260,8 @@ document.addEventListener('click', (e) => {
       return;
     }
   }
-  if (e.target.closest('.menu-toggle')) {
-    const m = $('#mobile-menu'); const t = e.target.closest('.menu-toggle');
-    const open = m.hidden;
-    m.hidden = !open; document.body.classList.toggle('menu-open', open);
-    t.setAttribute('aria-expanded', String(open)); t.innerHTML = String(icon(open ? 'close' : 'menu', 22));
-  }
+  if (e.target.closest('.menu-toggle')) setDrawer(!$('#mobile-menu')?.classList.contains('open'));
+  if (e.target.closest('[data-close-drawer]')) setDrawer(false);
   if (e.target.closest('[data-action="cookie-settings"]')) showConsent(true);
   if (e.target.closest('[data-action="logout"]')) {
     post('/api/auth/logout').then(async () => { state.user = null; renderHeader(); toast('You have been signed out.'); navigate('/'); });
