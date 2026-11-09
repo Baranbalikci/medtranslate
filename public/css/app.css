@@ -1480,3 +1480,53 @@ html[data-rtl] :is(h1, h2, h3, h4, p, li, summary, dd, td, th, blockquote) { uni
 .section-head h2 { text-wrap: balance; } .section-head p { text-wrap: pretty; }
 .pick-more { --ac: #0891B2; background: linear-gradient(160deg, #F0FAFF, #fff); border-style: dashed; }
 .lang-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 14px; margin-top: 8px; }
+
+/* ═══ Spice layer: page transitions, lit manifesto, spotlights, living edges ═══ */
+/* Page-to-page transitions (View Transitions API; header and footer stay put) */
+.site-header { view-transition-name: site-header; }
+::view-transition-old(root) { animation: vt-out .28s cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(root) { animation: vt-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-10px) scale(.992); filter: blur(4px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
+
+/* Hero: a second, warm aurora and a slow shimmer on the headline */
+.hero::before { content: ""; position: absolute; width: 46vmax; height: 46vmax; left: -16vmax; bottom: -26vmax; border-radius: 50%; background: radial-gradient(circle, rgba(251, 191, 36, .13), transparent 62%); filter: blur(20px); animation: aurora 18s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes aurora { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(8vmax, -4vmax) scale(1.12); } 100% { transform: translate(3vmax, 3vmax) scale(.95); } }
+.hero .grad-text .w > span { background-size: 220% 100%; animation: shimmer 9s ease-in-out infinite; }
+@keyframes shimmer { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* Manifesto: a sticky statement whose words light up while scrolling */
+.manifesto { --lp: 0; position: relative; height: 210vh; background: linear-gradient(180deg, #0A1D3B, #0B2244 50%, #0A1D3B); }
+.mf-sticky { position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); display: grid; place-items: center; overflow: hidden; }
+.mf-sticky::before { content: ""; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; background: radial-gradient(circle, rgba(45, 212, 191, calc(.05 + var(--lp) * .14)), transparent 60%); pointer-events: none; }
+.mf-text { position: relative; max-width: 980px; margin: 0 auto; font-size: clamp(1.7rem, 4.2vw, 3.4rem); font-weight: 700; line-height: 1.22; letter-spacing: -.025em; text-align: center; text-wrap: balance; }
+.mw { color: rgba(255, 255, 255, .14); transition: color .5s var(--ease), text-shadow .5s; }
+.mw.on { color: #fff; }
+.mw.hl.on { color: transparent; background: linear-gradient(120deg, #67E8F9, #5EEAD4 50%, #FDE68A); -webkit-background-clip: text; background-clip: text; text-shadow: none; }
+.mf-meter { position: relative; width: 160px; height: 3px; margin: 42px auto 0; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.mf-meter i { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--lp)); background: linear-gradient(90deg, #22D3EE, #5EEAD4); }
+@media (prefers-reduced-motion: reduce) { .manifesto { height: auto; } .mf-sticky { position: static; height: auto; padding: 96px 0; } .mw { color: #fff; } }
+.manifesto + .why { padding-top: clamp(72px, 9vw, 112px); }
+
+/* Spotlight that follows the pointer on cards */
+[data-spot] { --sx: 50%; --sy: -200px; }
+.pick-tile[data-spot], .topic-tile[data-spot] { background-image: radial-gradient(260px circle at var(--sx) var(--sy), color-mix(in srgb, var(--ac) 13%, transparent), transparent 70%); }
+.evi-card[data-spot], .case-card[data-spot], .stack-card[data-spot] { background-image: radial-gradient(320px circle at var(--sx) var(--sy), color-mix(in srgb, var(--ac, #22D3EE) 16%, transparent), transparent 70%), var(--dark-card); }
+.stack-card[data-spot] { background-image: radial-gradient(360px circle at var(--sx) var(--sy), color-mix(in srgb, var(--ac) 16%, transparent), transparent 70%), radial-gradient(500px 300px at 90% 10%, color-mix(in srgb, var(--ac) 30%, transparent), transparent 70%), linear-gradient(150deg, #0F2547, #08152B); }
+
+/* Living edges: a glowing seam where dark bands begin, a rotating light around the CTA */
+.story::before, .africa::before, .pulse::before { content: ""; position: absolute; left: 10%; right: 10%; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(103, 232, 249, .7), transparent); z-index: 2; }
+@property --ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.cta-band { isolation: isolate; }
+.cta-band::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; background: conic-gradient(from var(--ang), transparent 0 70%, #22D3EE 82%, #FDE68A 90%, transparent 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spinang 6s linear infinite; pointer-events: none; z-index: 1; }
+@keyframes spinang { to { --ang: 360deg; } }
+
+/* Eyebrows draw a short line as they appear */
+.eyebrow.reveal::before { content: ""; width: 0; height: 2px; border-radius: 2px; background: currentColor; transition: width .8s var(--ease) .2s; }
+.eyebrow.reveal.in::before { width: 22px; }
+
+/* Buttons: soft sheen on hover */
+.btn-primary, .btn-accent { position: relative; overflow: hidden; }
+.btn-primary::after, .btn-accent::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .35), transparent); transform: skewX(-20deg); transition: left .7s var(--ease); pointer-events: none; }
+.btn-primary:hover::after, .btn-accent:hover::after { left: 130%; }
+@media (prefers-reduced-motion: reduce) { .hero::before, .hero .grad-text .w > span, .cta-band::before { animation: none; } }

@@ -73,10 +73,17 @@ async function render({ keepScroll = false } = {}) {
     document.title = title ? `${title} · MedTranslate` : 'MedTranslate — Emergency Medicine Without Language Barriers';
     const desc = view.description ? (typeof view.description === 'function' ? view.description(ctx) : view.description) : null;
     $('meta[name="description"]').setAttribute('content', desc || 'Emergency medicine education (CME/CPD) in every language, with AI subtitles and multilingual audio.');
-    main.innerHTML = String(out);
-    main.classList.remove('leaving');
-    main.removeAttribute('aria-busy');
-    if (!keepScroll) window.scrollTo({ top: 0, behavior: 'instant' });
+    const swap = () => {
+      main.innerHTML = String(out);
+      main.classList.remove('leaving');
+      main.removeAttribute('aria-busy');
+      if (!keepScroll) window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    // Smooth page-to-page transition where the browser supports it (header stays put).
+    if (document.startViewTransition && !keepScroll && !matchMedia('(prefers-reduced-motion: reduce)').matches && main.childElementCount) {
+      main.classList.remove('leaving');
+      await document.startViewTransition(swap).updateCallbackDone.catch(swap);
+    } else swap();
     if (!STATIC && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
     updateNav();
     if (view.mount) cleanup = view.mount(main, ctx) || null;

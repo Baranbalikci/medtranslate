@@ -85,6 +85,13 @@ function onScroll() {
         const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
         el.style.setProperty('--hp', p.toFixed(3));
         if (!el.classList.contains('hs-native')) track.style.transform = `translate3d(${(-p * Math.max(0, track.scrollWidth - el.clientWidth)).toFixed(1)}px,0,0)`;
+      } else if (mode === 'lit') {
+        // Words light up one after another while the sticky statement is pinned.
+        const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh * 0.9)));
+        const words = el._words || (el._words = [...el.querySelectorAll('.mw')]);
+        const n = Math.round(p * words.length * 1.08);
+        words.forEach((w, i) => w.classList.toggle('on', i < n));
+        el.style.setProperty('--lp', p.toFixed(3));
       } else if (mode === 'hero') {
         // 0 at rest → 1 when the hero has scrolled away
         el.style.setProperty('--hp', Math.min(1, Math.max(0, -r.top / Math.max(1, r.height))).toFixed(3));
@@ -99,6 +106,12 @@ function onScroll() {
 
 function onPointer(e) {
   if (reduce() || e.pointerType === 'touch') return;
+  const spot = e.target.closest('[data-spot]');
+  if (spot) {
+    const r = spot.getBoundingClientRect();
+    spot.style.setProperty('--sx', `${(e.clientX - r.left).toFixed(0)}px`);
+    spot.style.setProperty('--sy', `${(e.clientY - r.top).toFixed(0)}px`);
+  }
   const card = e.target.closest('[data-tilt]');
   if (!card) return;
   const r = card.getBoundingClientRect();

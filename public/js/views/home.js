@@ -14,6 +14,9 @@ const HERO_LINES = [
   ['FR', 'Tout patient suspect de SCA doit bénéficier d’un ECG 12 dérivations dans les dix minutes.'],
 ];
 
+const MANIFESTO = 'Every *minute* in an emergency counts. Every *misunderstood* sentence costs one. We bring the world’s best emergency teaching to *Nigeria,* *Kenya* and beyond — in the *language* your team thinks in.'
+  .split(' ').map((w) => [w.replace(/\*/g, ''), w.startsWith('*')]);
+
 export const specIcon = (name) => icon(name || 'stethoscope', 20);
 
 export default {
@@ -65,6 +68,13 @@ export default {
       <a href="#platform" class="scroll-cue" aria-label="Scroll down"><span></span></a>
     </section>
 
+    <section class="manifesto" data-fx-scroll="lit" aria-label="Our mission">
+      <div class="mf-sticky"><div class="container">
+        <p class="mf-text">${MANIFESTO.map(([w, hl], i) => html`<span class="mw ${hl ? 'hl' : ''}" style="--i:${i}">${w}</span> `)}</p>
+        <div class="mf-meter" aria-hidden="true"><i></i></div>
+      </div></div>
+    </section>
+
     ${focus ? html`<section class="section why" id="why">
       <div class="container">
         <div class="section-head">
@@ -77,7 +87,7 @@ export default {
             ['01', 'clock', 'Minutes matter', 'Recognition and first-hour care decide outcomes in stroke, sepsis, cardiac and airway emergencies. Teams need to understand the lesson the first time.', '#FB7185', 'ring'],
             ['02', 'globe', 'Protocols travel', 'Emergency pathways are built on shared evidence and checklists, so a well-translated lesson is useful in Nairobi, Lima and Berlin alike.', '#22D3EE', 'orbit'],
             ['03', 'layers', 'Short and focused', 'Compact modules fit between shifts and are quick to translate, review and release one language at a time.', '#FBBF24', 'bars'],
-          ].map(([n, i, t, d, ac, art], k) => html`<article class="stack-card" style="--i:${k};--ac:${ac}">
+          ].map(([n, i, t, d, ac, art], k) => html`<article class="stack-card" data-spot style="--i:${k};--ac:${ac}">
             <div class="sc-copy"><span class="sc-num">${n}</span><div class="ic">${icon(i, 24)}</div><h3>${t}</h3><p>${d}</p></div>
             <div class="sc-art" aria-hidden="true" data-parallax="0.06">${art === 'ring'
               ? html`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" class="r0"/><circle cx="100" cy="100" r="78" class="r1" pathLength="100"/><path d="M100 54v48l30 18" class="hand"/></svg>`
@@ -96,7 +106,7 @@ export default {
           <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
         </div>
         <div class="picker" data-stagger>
-          ${(focus ? topics : m.specialties).map((s) => html`<a class="pick-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
+          ${(focus ? topics : m.specialties).map((s) => html`<a class="pick-tile" data-spot href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
             <span class="pk-top"><span class="pk-ic">${icon(s.icon || 'stethoscope', 24)}</span><span class="pk-count">${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Soon'}</span></span>
             <b>${s.name}</b>
             <small>${s.description || ''}</small>
@@ -251,7 +261,7 @@ export default {
             ['5', 5, 0, ' million', 'deaths a year from poor-quality care', 'In low- and middle-income countries, more people die after reaching a health service that gives poor-quality care than from having no access to care at all.', 'Kruk ME et al. Lancet Glob Health 2018;6:e1196–e1252.', '#F87171'],
             ['1.9', 1.9, 1, ' M', 'neurons lost per minute in stroke', 'An untreated large-vessel stroke destroys about 1.9 million neurons every minute. Recognising it fast is the treatment.', 'Saver JL. Stroke 2006;37:263–266.', '#A78BFA'],
             ['7.6', 7.6, 1, ' %', 'lower survival per hour of delay', 'In septic shock, every hour before effective antibiotics was linked to about 7.6 % lower survival.', 'Kumar A et al. Crit Care Med 2006;34:1589–1596.', '#FBBF24'],
-          ].map(([txt, v, dec, suf, cap, body, src, ac]) => html`<article class="evi-card" style="--ac:${ac}">
+          ].map(([txt, v, dec, suf, cap, body, src, ac]) => html`<article class="evi-card" data-spot style="--ac:${ac}">
             <div class="evi-num"><span data-count="${v}" data-dec="${dec}" data-suffix="${suf}">${txt}${suf}</span></div>
             <h3>${cap}</h3><p>${body}</p><small>${src}</small></article>`)}
         </div>
@@ -261,7 +271,7 @@ export default {
             ['West Africa', 'Seizures in late pregnancy', 'A 22-year-old woman in her third trimester arrives with seizures. They are treated as epilepsy; her blood pressure is not measured and magnesium sulfate is not given. She dies of eclampsia the same night.', 'Eclampsia remains a leading cause of maternal death in sub-Saharan Africa. Magnesium sulfate is inexpensive and recommended by WHO.', 'WHO recommendations for prevention and treatment of pre-eclampsia and eclampsia, 2011.', '#F87171'],
             ['East Africa', 'A child with fever', 'A three-year-old with high fever and drowsiness is treated for malaria without a test. The cause is bacterial meningitis. When antibiotics are finally given, it is too late.', 'Severe febrile illness is often labelled “malaria” by default; in one Tanzanian study most patients treated for severe malaria did not have it.', 'Reyburn H et al. BMJ 2004;329:1212.', '#FBBF24'],
             ['Andean region, South America', 'Chest pain called “gastritis”', 'A 48-year-old man with chest pain at a rural health post is sent home with antacids. No ECG is recorded. He returns two days later in cardiac arrest.', 'Acute coronary syndromes are easily missed where ECG skills and current protocols are not part of everyday training.', 'Illustrative pattern; no single source.', '#38BDF8'],
-          ].map(([where, what, story, why, src, ac]) => html`<article class="case-card" style="--ac:${ac}">
+          ].map(([where, what, story, why, src, ac]) => html`<article class="case-card" data-spot style="--ac:${ac}">
             <span class="cc-meta">${icon('globe', 13)} ${where} · composite case</span><h4>${what}</h4><p class="cc-story">${story}</p><p class="cc-why">${why}</p><small>${src}</small></article>`)}
         </div>
         <p class="cases-line reveal">None of these deaths needed expensive technology to prevent. They needed a team that knew what to look for — taught in a language it understands.</p>

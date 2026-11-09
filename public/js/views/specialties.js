@@ -14,7 +14,7 @@ export default {
     const base = focus ? '/topics' : '/specialties';
     const live = list.filter((s) => s.course_count);
     const soon = list.filter((s) => !s.course_count);
-    const card = (s, i) => html`<a class="topic-tile ${i === 0 ? 'big' : ''}" href="${base}/${s.slug}" data-topic="${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
+    const card = (s, i) => html`<a class="topic-tile ${i === 0 ? 'big' : ''}" data-spot href="${base}/${s.slug}" data-topic="${s.slug}" style="--ac:${s.accent || '#22D3EE'}">
       <span class="tt-glow" aria-hidden="true"></span>
       <span class="tt-ic">${specIcon(s.icon)}</span>
       <h3>${s.name}</h3><p>${s.description || ''}</p>
