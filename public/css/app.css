@@ -1479,3 +1479,4 @@ html[data-rtl] :is(h1, h2, h3, h4, p, li, summary, dd, td, th, blockquote) { uni
 .hero + .why, .story + .section, .africa + .section { padding-top: clamp(72px, 9vw, 112px); }
 .section-head h2 { text-wrap: balance; } .section-head p { text-wrap: pretty; }
 .pick-more { --ac: #0891B2; background: linear-gradient(160deg, #F0FAFF, #fff); border-style: dashed; }
+.lang-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 14px; margin-top: 8px; }

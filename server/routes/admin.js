@@ -5,6 +5,8 @@ import { get, all, run, tx, audit, parseJson, setSetting } from '../db.js';
 import { config } from '../config.js';
 import { LANGUAGE_CODES, COUNTRY_CODES } from '../languages.js';
 import { launchFocus } from '../catalog.js';
+import { launchLanguages, launchLanguagesLocked, DEFAULT_LAUNCH_LANGUAGES } from '../launch.js';
+import { LANGUAGES } from '../languages.js';
 import { loadCourseById } from '../catalog.js';
 import {
   RIGHTS, licenseFor, accreditationFor, publishBlockers, translationReleaseBlockers, licenseBlockers, accreditationBlockers,
@@ -355,8 +357,20 @@ export function registerAdminRoutes(r) {
     providers: all('SELECT * FROM providers ORDER BY name'),
     topics: all('SELECT t.*, s.slug AS specialty FROM topics t LEFT JOIN specialties s ON s.id = t.specialty_id ORDER BY t.sort, t.name'),
     focus: launchFocus(),
+    launchLanguages: launchLanguages(), launchLanguagesLocked: launchLanguagesLocked(), defaultLaunchLanguages: DEFAULT_LAUNCH_LANGUAGES,
+    allLanguages: LANGUAGES.map((l) => ({ code: l.code, name: l.name, native: l.native, region: l.region })),
     focusLocked: process.env.LAUNCH_FOCUS !== undefined,
   }), STAFF);
+  // Launch languages: which languages the public can use ('*' = all).
+  r.put('/api/admin/launch-languages', async (ctx) => {
+    if (launchLanguagesLocked()) throw bad('The launch languages are fixed by the LAUNCH_LANGUAGES environment variable.');
+    const b = await ctx.json();
+    const value = b.all ? '*' : JSON.stringify((Array.isArray(b.languages) ? b.languages : []).filter((c) => LANGUAGE_CODES.has(c)));
+    setSetting('launch_languages', value);
+    audit(ctx.user.id, 'catalogue.launch_languages_changed', 'setting', 'launch_languages', { value });
+    return { ok: true, launchLanguages: launchLanguages() };
+  }, ADMIN);
+
   // Launch focus: which specialty is public. Empty = the whole catalogue.
   r.put('/api/admin/focus', async (ctx) => {
     if (process.env.LAUNCH_FOCUS !== undefined) throw bad('The launch focus is fixed by the LAUNCH_FOCUS environment variable.');

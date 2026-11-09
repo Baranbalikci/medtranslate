@@ -28,6 +28,22 @@ export async function translationStatus() {
 
 export class ProviderNotConnectedError extends Error {}
 
+// Language-specific guidance for the launch languages (Nigeria, Kenya and the established set).
+// In Nigeria and Kenya clinical training is in English, so clinicians mix in English medical terms;
+// translations follow that real usage instead of forcing rare or invented local terms.
+export const LANGUAGE_NOTES = {
+  sw: 'Kiswahili: standard Kiswahili as used in Kenyan and Tanzanian health services. Use established Kiswahili medical words where clinicians and nurses actually use them; otherwise keep the English medical term (e.g. ECG, CT, sepsis) and explain it briefly in Kiswahili at first mention. Natural Kenyan clinical register, not literary.',
+  ha: 'Hausa: standard (Kano) Hausa in Latin (Boko) script with the hooked letters ɓ, ɗ, ƙ and ʼy — never Ajami. Nigerian clinicians use many English medical terms; keep them where no common Hausa term exists, with a short Hausa explanation at first mention.',
+  yo: 'Yorùbá: standard Yorùbá with complete tone marks and under-dots (ẹ, ọ, ṣ) on every word — missing diacritics change meaning. Keep English medical terms that Nigerian clinicians use (ECG, CT, stroke, sepsis) when no established Yorùbá term exists, with a brief Yorùbá explanation at first mention.',
+  ig: 'Igbo: Standard Igbo (Igbo Izugbe) with the dotted vowels ị, ọ, ụ and ṅ; add tone marks only where needed to avoid ambiguity. Keep English medical terms that Nigerian clinicians use when no established Igbo term exists, with a brief Igbo explanation at first mention.',
+  pcm: 'Nigerian Pidgin (Naijá): write it the way it is widely written today (e.g. BBC News Pidgin style), plain and spoken. Medical terms, drug names, numbers and units stay in standard English.',
+  ar: 'Arabic: Modern Standard Arabic as used in medical teaching across the Arab world; keep Latin abbreviations (ECG, CT, STEMI) where customary and Western digits for doses and numbers.',
+  fr: 'French: terminology used by francophone clinicians (also in West and Central Africa); standard metropolitan spelling.',
+  pt: 'Portuguese: neutral Portuguese understandable in Brazil, Portugal and Lusophone Africa; prefer terms common to all.',
+  es: 'Spanish: neutral Latin-American-friendly Spanish understood across Spanish-speaking countries.',
+  de: 'German: terminology as used by German-speaking emergency physicians (e.g. Notaufnahme, Schockraum).',
+};
+
 export const SYSTEM_PROMPT = `You are a medical translator and clinician-editor. You translate subtitle cues of medical education videos (mostly emergency medicine) for physicians, nurses and paramedics. The translation is also read aloud by a synthetic voice, so it must sound like something a colleague would actually say.
 
 Translate MEANING, not words:
@@ -106,7 +122,7 @@ export async function translateCues({ cues, source, target, courseTitle, context
   const src = languageByCode(source)?.name || source;
   const tgt = languageByCode(target)?.name || target;
   const gl = glossary.length ? `Glossary (${tgt}):\n${glossary.map((g) => `- ${g.term} → ${g.translation}${g.note ? ` (${g.note})` : ''}`).join('\n')}` : 'Glossary: none for this language.';
-  const head = [`Course: ${courseTitle}`, `Translate from ${src} to ${tgt}.`, gl];
+  const head = [`Course: ${courseTitle}`, `Translate from ${src} to ${tgt}.`, ...(LANGUAGE_NOTES[target] ? [`Notes for ${tgt}: ${LANGUAGE_NOTES[target]}`] : []), gl];
   if (context?.before?.length) head.push(`Context before (do NOT translate):\n${context.before.map((t) => `- ${t}`).join('\n')}`);
   const cueJson = `Cues (JSON):\n${JSON.stringify(cues.map((c, i) => ({ index: i, speaker: c.speaker || null, text: c.text })))}`;
   const tail = context?.after?.length ? `\n\nContext after (do NOT translate):\n${context.after.map((t) => `- ${t}`).join('\n')}` : '';

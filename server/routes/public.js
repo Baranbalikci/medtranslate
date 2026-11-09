@@ -7,6 +7,7 @@ import { signMediaPath } from '../services/media.js';
 import { translationStatus, translateCues, translateStrings, ProviderNotConnectedError } from '../services/translation.js';
 import crypto from 'node:crypto';
 import { paymentMode } from '../services/payments.js';
+import { launchLanguages, isLaunchLanguage, LAUNCH_COUNTRIES, ESTABLISHED_LANGUAGES } from '../launch.js';
 import { mailConnected } from '../services/mail.js';
 import { HttpError, notFound, bad, str, email, oneOf, rateLimit } from '../http.js';
 
@@ -38,9 +39,10 @@ export function registerPublicRoutes(r) {
     for (const c of visible) for (const t of availableTracks(c, licenseFor(c.id))) live.add(t.language);
     const ai = await translationStatus();
     return {
-      languages: LANGUAGES.map((l) => ({ ...l, live: live.has(l.code) })),
-      regions: REGIONS.map(([code, name]) => ({ code, name })),
-      countries: COUNTRIES.map(([code, name]) => ({ code, name, languages: COUNTRY_LANGS[code] || [] })).sort((a, b) => a.name.localeCompare(b.name)),
+      languages: LANGUAGES.filter((l) => isLaunchLanguage(l.code)).map((l) => ({ ...l, live: live.has(l.code) })),
+      regions: REGIONS.filter(([code]) => LANGUAGES.some((l) => l.region === code && isLaunchLanguage(l.code))).map(([code, name]) => ({ code, name })),
+      countries: COUNTRIES.map(([code, name]) => ({ code, name, languages: (COUNTRY_LANGS[code] || []).filter(isLaunchLanguage) })).sort((a, b) => a.name.localeCompare(b.name)),
+      launch: launchLanguages() === '*' ? null : { countries: LAUNCH_COUNTRIES.map((c) => ({ ...c, languages: c.languages.filter(isLaunchLanguage) })), established: ESTABLISHED_LANGUAGES.filter(isLaunchLanguage) },
       professions: PROFESSIONS,
       specialties, topics, providers, plans, focus: focusInfo,
       integrations: {
@@ -162,6 +164,7 @@ export function registerPublicRoutes(r) {
     const c = publishedCourseOr404(ctx.params.slug);
     const b = await ctx.json();
     if (!LANGUAGE_CODES.has(b.language) || b.language === c.original_language) throw bad('Choose a target language.');
+    if (!isLaunchLanguage(b.language)) throw bad('This language is not available yet.');
     const license = licenseFor(c.id);
     if (!territoryAllows(license, ctx.user?.country)) throw new HttpError(451, 'Not licensed for your country.');
     if (!liveAllowed(license)) throw new HttpError(403, 'Live AI translation is not permitted for this course.');
@@ -283,7 +286,7 @@ export function registerPublicRoutes(r) {
   r.post('/api/i18n/translate', async (ctx) => {
     rateLimit(`i18n:${ctx.ip}`, 120, 3600_000);
     const b = await ctx.json();
-    if (!LANGUAGE_CODES.has(b.language) || b.language === 'en') throw bad('Choose a target language.');
+    if (!LANGUAGE_CODES.has(b.language) || b.language === 'en' || !isLaunchLanguage(b.language)) throw bad('Choose a target language.');
     const strings = (Array.isArray(b.strings) ? b.strings : []).slice(0, 80).map((x) => String(x).slice(0, 2000));
     if (!strings.length) return { translations: [] };
     const hash = (t) => crypto.createHash('sha1').update(t).digest('hex');

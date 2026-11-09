@@ -20,6 +20,7 @@ export const LANGUAGES = [
   { code: 'am', name: 'Amharic', native: 'አማርኛ', bcp47: 'am-ET', dir: 'ltr', region: 'africa' },
   { code: 'yo', name: 'Yoruba', native: 'Yorùbá', bcp47: 'yo-NG', dir: 'ltr', region: 'africa' },
   { code: 'ig', name: 'Igbo', native: 'Igbo', bcp47: 'ig-NG', dir: 'ltr', region: 'africa' },
+  { code: 'pcm', name: 'Nigerian Pidgin', native: 'Naijá', bcp47: 'pcm-NG', dir: 'ltr', region: 'africa' },
   { code: 'zu', name: 'Zulu', native: 'isiZulu', bcp47: 'zu-ZA', dir: 'ltr', region: 'africa' },
   { code: 'xh', name: 'Xhosa', native: 'isiXhosa', bcp47: 'xh-ZA', dir: 'ltr', region: 'africa' },
   { code: 'af', name: 'Afrikaans', native: 'Afrikaans', bcp47: 'af-ZA', dir: 'ltr', region: 'africa' },
@@ -90,7 +91,7 @@ export const COUNTRY_CODES = new Set(COUNTRIES.map((c) => c[0]));
 // "spoken in your country" shortcut in the player's language picker.
 export const COUNTRY_LANGS = {
   KE: ['sw', 'en'], TZ: ['sw', 'en'], UG: ['sw', 'en'], RW: ['rw', 'sw', 'fr', 'en'], ET: ['am', 'om', 'ti', 'so', 'en'], ER: ['ti', 'ar', 'en'], SO: ['so', 'ar'],
-  NG: ['ha', 'yo', 'ig', 'en'], GH: ['ak', 'en'], SN: ['wo', 'fr'], CI: ['fr'], CM: ['fr', 'en'], CD: ['ln', 'sw', 'fr'], AO: ['pt'], MZ: ['pt', 'sw'],
+  NG: ['ha', 'yo', 'ig', 'pcm', 'en'], GH: ['ak', 'en'], SN: ['wo', 'fr'], CI: ['fr'], CM: ['fr', 'en'], CD: ['ln', 'sw', 'fr'], AO: ['pt'], MZ: ['pt', 'sw'],
   ZM: ['ny', 'en'], ZW: ['sn', 'en'], MW: ['ny', 'en'], MG: ['mg', 'fr'], BW: ['tn', 'en'], ZA: ['zu', 'xh', 'af', 'tn', 'en'],
   EG: ['ar'], SD: ['ar', 'en'], TN: ['ar', 'fr'], DZ: ['ar', 'fr'], MA: ['ar', 'fr'], SA: ['ar'], AE: ['ar', 'en'], TR: ['tr', 'ku'], IR: ['fa', 'ku'],
   PE: ['qu', 'ay', 'es'], BO: ['qu', 'ay', 'gn', 'es'], PY: ['gn', 'es'], HT: ['ht', 'fr'], BR: ['pt'], MX: ['es'], CO: ['es'], AR: ['es'],

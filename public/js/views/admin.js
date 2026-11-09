@@ -159,6 +159,13 @@ export default function adminView() {
             <p class="small muted" style="margin-top:0">While a focus is set, only courses filed under that specialty are visible on the website, in search, in the sitemap and by direct link. Staff still see everything here. Clear it to open the whole catalogue.</p>
             <form id="focus" class="row"><select name="specialty" class="input-sm" style="width:auto" ${d.focusLocked ? 'disabled' : ''}><option value="">None — all specialties</option>${d.specialties.map((s) => html`<option value="${s.slug}" ${d.focus === s.slug ? 'selected' : ''}>${s.name}</option>`)}</select>
               <button class="btn btn-primary btn-sm" ${d.focusLocked ? 'disabled' : ''}>Apply</button>${d.focusLocked ? html`<span class="xs muted">Fixed by the LAUNCH_FOCUS environment variable.</span>` : ''}</form></div>
+          <div class="panel" style="margin-bottom:20px"><div class="panel-head"><h3>Launch languages</h3><span class="small muted">Which languages the public can use</span></div>
+            <p class="small muted" style="margin-top:0">Launch set: established languages with mature AI translation, plus the languages of the launch countries Nigeria and Kenya. All other languages stay hidden (no subtitles, voice, live or website translation) until you add them here.</p>
+            <form id="langs">
+              <label class="check"><input type="checkbox" name="all" ${d.launchLanguages === '*' ? 'checked' : ''} ${d.launchLanguagesLocked ? 'disabled' : ''}> <span class="small">All languages (no launch restriction)</span></label>
+              <div class="lang-checks">${d.allLanguages.map((l) => html`<label class="check"><input type="checkbox" name="lang" value="${l.code}" ${d.launchLanguages === '*' || d.launchLanguages.includes(l.code) ? 'checked' : ''} ${d.launchLanguagesLocked || l.code === 'en' ? 'disabled' : ''}> <span class="small">${l.native} <span class="muted">· ${l.name}${d.defaultLaunchLanguages.includes(l.code) ? ' ★' : ''}</span></span></label>`)}</div>
+              <div class="row" style="margin-top:12px"><button class="btn btn-primary btn-sm" ${d.launchLanguagesLocked ? 'disabled' : ''}>Apply</button><span class="xs muted">★ = default launch set${d.launchLanguagesLocked ? ' · fixed by the LAUNCH_LANGUAGES environment variable' : ''}</span></div>
+            </form></div>
           <div class="grid-2">
           <div class="panel"><div class="panel-head"><h3>Medical specialties</h3></div>
             <form id="new-spec" class="row" style="margin-bottom:16px"><input name="name" class="input-sm" placeholder="New specialty" required style="flex:1"><input name="description" class="input-sm" placeholder="Short description" style="flex:1"><button class="btn btn-primary btn-sm">Add</button></form>
@@ -370,6 +377,13 @@ export default function adminView() {
       handle('[data-complaint]', async (f, v) => {
         if (v.suspendCourse && !(await ask('Suspend the affected course immediately?'))) return;
         await patch(`/api/admin/complaints/${f.dataset.complaint}`, v); toast('Saved.', 'success'); reload();
+      });
+      root.querySelector('#langs')?.addEventListener('submit', async (e) => {
+        e.preventDefault(); const f = e.target;
+        try {
+          await put('/api/admin/launch-languages', { all: f.elements.all.checked, languages: [...f.querySelectorAll('[name=lang]:checked')].map((x) => x.value) });
+          toast('Launch languages updated.', 'success'); const { loadSession } = await import('../store.js'); await loadSession(); reload();
+        } catch (err) { toast(err.message, 'error'); }
       });
       handle('#focus', async (f, v) => { await put('/api/admin/focus', { specialty: v.specialty }); toast(v.specialty ? 'Launch focus applied.' : 'Whole catalogue is public now.', 'success'); const { loadSession } = await import('../store.js'); await loadSession(); reload(); });
       handle('#new-spec', async (f, v) => { await post('/api/admin/specialties', v); toast('Specialty added.', 'success'); reload(); });

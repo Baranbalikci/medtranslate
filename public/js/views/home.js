@@ -18,7 +18,7 @@ export const specIcon = (name) => icon(name || 'stethoscope', 20);
 
 export default {
   title: '',
-  description: 'Emergency medicine education in every language: licensed courses with AI subtitles and AI voice, for teams who cannot wait for a translation.',
+  description: 'Emergency medicine education for Nigeria, Kenya and beyond: licensed courses with AI subtitles and AI voice, for teams who cannot wait for a translation.',
   async render() {
     const m = state.meta;
     const focus = m.focus;
@@ -31,7 +31,7 @@ export default {
       <div class="hero-glow" aria-hidden="true"></div>
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="pill reveal" data-fx="drop"><span class="dot">${focus ? focus.name.toUpperCase() : 'NEW'}</span> Launch focus · live AI subtitles in any language</span>
+          <span class="pill reveal" data-fx="drop"><span class="dot">${focus ? focus.name.toUpperCase() : 'NEW'}</span> Launch focus · Nigeria &amp; Kenya first</span>
           <h1 data-fx="words">${focus ? 'Emergency medicine' : 'Medical knowledge'}<br><span class="grad-text">without language barriers.</span></h1>
           <p class="lead reveal" data-fx="blur" style="--d:.35s">${focus ? 'When minutes count, language should not. Licensed emergency medicine education with AI subtitles and voice in the language your team speaks.' : 'Access high-quality medical education worldwide through AI-powered translation, subtitles and multilingual audio — from licensed providers, with transparent quality control.'}</p>
           <div class="hero-actions reveal" style="--d:.5s">
@@ -162,7 +162,7 @@ export default {
                   <span>Start by establishing the exact time</span><span>the patient was last known well.</span><span class="dim">Check capillary glucose immediately…</span></div>
                   <span class="sv-chip">${icon('file', 13)} Transcript · English</span></div>
                 <div class="sv-layer l1"><div class="sv-tx">
-                  ${[['DE', 'Ermitteln Sie zuerst den genauen Zeitpunkt …'], ['SW', 'Anza kwa kubaini muda kamili …'], ['FR', 'Commencez par établir l’heure exacte …'], ['AR', 'ابدأ بتحديد الوقت الدقيق …'], ['QU', 'Qallariy yachaspa hayk’aqmi …']].map(([c, t], i) => html`<span style="--i:${i}"><b>${c}</b>${t}</span>`)}
+                  ${[['DE', 'Ermitteln Sie zuerst den genauen Zeitpunkt …'], ['SW', 'Anza kwa kubaini muda kamili …'], ['FR', 'Commencez par établir l’heure exacte …'], ['AR', 'ابدأ بتحديد الوقت الدقيق …']].map(([c, t], i) => html`<span style="--i:${i}"><b>${c}</b>${t}</span>`)}
                 </div><span class="sv-chip">${icon('sparkles', 13)} Glossary · STEMI, hs-troponin, LVO</span></div>
                 <div class="sv-layer l2"><div class="sv-wave">${Array.from({ length: 36 }, (_, i) => html`<i style="--i:${i}"></i>`)}</div>
                   <div class="sv-speakers"><span>${icon('user', 13)} Host · voice A</span><span>${icon('user', 13)} Expert · voice B</span></div></div>
@@ -170,7 +170,7 @@ export default {
                   ${['Terminology matches glossary', 'Meaning, numbers and doses preserved', 'Readable and in sync'].map((t, i) => html`<li style="--i:${i}">${icon('check', 15)} ${t}</li>`)}
                 </ul><span class="sv-stamp">Approved · reviewer</span></div>
                 <div class="sv-layer l4"><div class="sv-langs">
-                  ${['English', 'Deutsch', 'Kiswahili', 'Français', 'العربية', 'Español', 'አማርኛ', 'Runa Simi', 'हिन्दी', '中文', 'Yorùbá', 'Kreyòl'].map((t, i) => html`<span style="--i:${i}" class="${i > 9 ? 'live' : ''}">${t}${i > 9 ? html` <b>LIVE</b>` : ''}</span>`)}
+                  ${['English', 'Kiswahili', 'Français', 'العربية', 'Español', 'Português', 'Deutsch', 'Hausa', 'Yorùbá', 'Igbo', 'Naijá'].map((t, i) => html`<span style="--i:${i}" class="${i > 9 ? 'live' : ''}">${t}${i > 9 ? html` <b>LIVE</b>` : ''}</span>`)}
                 </div></div>
               </div>
               <div class="sv-dots">${[0, 1, 2, 3, 4].map((k) => html`<i data-dot="${k}"></i>`)}</div>
@@ -196,12 +196,13 @@ export default {
       <div class="africa-bg" aria-hidden="true"></div>
       <div class="container grid-2 africa-grid">
         <div>
-          <span class="eyebrow reveal">Africa first</span>
+          <span class="eyebrow reveal">Nigeria &amp; Kenya first</span>
           <h2 data-fx="words">Built for where the need is greatest.</h2>
-          <p class="lead reveal" data-fx="blur">Clinicians in low- and middle-income countries carry the heaviest disease burden with the least access to current continuing education in their own language. That is who we build for first.</p>
+          <p class="lead reveal" data-fx="blur">We launch in Nigeria and Kenya. Medical training there is in English, yet many nurses, clinical officers and community health workers learn faster in the language they speak every day. That is who we build for first.</p>
           <ul class="checklist reveal" data-fx="blur">
-            <li>${icon('zap', 18)}<span><b>Live AI subtitles in any language</b> — Kiswahili, Hausa, Yorùbá, Igbo, isiZulu, Amharic, Somali, Kinyarwanda, Afaan Oromoo — generated while the lecture plays.</span></li>
-            <li>${icon('wave', 18)}<span><b>AI voice tracks</b> — the free Stroke course already speaks Kiswahili, Amharic, Afrikaans, Afaan Oromoo, Setswana and Tigrinya, plus French, Arabic and Portuguese.</span></li>
+            <li>${icon('globe', 18)}<span><b>Nigeria</b> — Hausa, Yorùbá, Igbo and Nigerian Pidgin, with the English medical terms Nigerian clinicians actually use kept where they belong.</span></li>
+            <li>${icon('wave', 18)}<span><b>Kenya</b> — Kiswahili subtitles and an AI voice track; the free Stroke course already speaks Kiswahili.</span></li>
+            <li>${icon('layers', 18)}<span><b>Established languages</b> — English, French, Spanish, Portuguese, German and Arabic for teams across Africa and beyond. More languages follow once these are reviewed.</span></li>
             <li>${icon('download', 18)}<span><b>Made for slow connections</b> — subtitles need about 1 KB per minute; switch to audio-only or subtitles when bandwidth is short.</span></li>
           </ul>
           <a class="btn btn-accent btn-lg magnetic reveal" style="margin-top:12px" href="/courses/stroke-first-60-minutes">Try Kiswahili in the player ${icon('play', 16)}</a>

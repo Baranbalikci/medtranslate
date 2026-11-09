@@ -16,6 +16,16 @@ Translate MEANING, not words:
 - Keep ECG leads (V1–V9), units and customary abbreviations (ECG, CT, STEMI, MAP). Similar length to the source (up to ~20% longer is fine).
 Output: one JSON object per line, exactly {"i": <cue index>, "t": "<translation>"}, only for the cues under "Cues", in the given order, and nothing else.`;
 
+// Same language notes as the server (launch languages: Nigeria, Kenya, established set).
+const NOTES = {
+  sw: 'Standard Kiswahili as used in Kenyan health services; keep English medical terms clinicians actually use (ECG, CT, sepsis) where no common Kiswahili word exists, briefly explained at first mention.',
+  ha: 'Standard (Kano) Hausa in Latin script with ɓ, ɗ, ƙ, ʼy (never Ajami); keep English medical terms Nigerian clinicians use where no common Hausa term exists.',
+  yo: 'Standard Yorùbá with complete tone marks and under-dots (ẹ, ọ, ṣ) on every word; keep English medical terms Nigerian clinicians use where no established Yorùbá term exists.',
+  ig: 'Standard Igbo with dotted vowels ị, ọ, ụ and ṅ (tone marks only where needed); keep English medical terms Nigerian clinicians use where no established Igbo term exists.',
+  pcm: 'Nigerian Pidgin (Naijá) as widely written today (BBC News Pidgin style); medical terms, drug names, numbers and units stay in standard English.',
+  ar: 'Modern Standard Arabic as used in medical teaching; keep Latin abbreviations (ECG, CT) and Western digits.',
+};
+
 let samplePromise = null;
 const getSample = () => (samplePromise ||= (window.claude?.use ? window.claude.use('sample') : Promise.resolve(null)));
 
@@ -39,7 +49,7 @@ export async function translateLive({ lang, source, from, onCues, signal, course
     const first = part[0].idx; const last = part[part.length - 1].idx;
     const before = source.filter((q) => q.idx < first).slice(-3).map((q) => `- ${q.text}`).join('\n');
     const after = source.filter((q) => q.idx > last).slice(0, 2).map((q) => `- ${q.text}`).join('\n');
-    const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").${before ? `\n\nContext before (do not translate):\n${before}` : ''}${after ? `\n\nContext after (do not translate):\n${after}` : ''}\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
+    const prompt = `${RULES}\n\nCourse: ${courseTitle}\nTranslate from English into ${languageName(lang)} (language code "${lang}").${NOTES[lang] ? `\nLanguage notes: ${NOTES[lang]}` : ''}${before ? `\n\nContext before (do not translate):\n${before}` : ''}${after ? `\n\nContext after (do not translate):\n${after}` : ''}\n\nCues:\n${part.map((q) => JSON.stringify({ i: q.idx, speaker: q.speaker || null, text: q.text })).join('\n')}`;
     let pending = '';
     const eat = (s) => {
       const lines = (pending + s).split('\n');

@@ -16,20 +16,15 @@ function decodeMask() {
 
 export const HUB = { lat: 52.5, lon: 13.4 }; // Berlin
 export const NODES = [
+  // Launch countries (warm): Kenya and Nigeria.
   { name: 'Nairobi', lat: -1.3, lon: 36.8, text: 'Karibu', warm: 1 },
   { name: 'Lagos', lat: 6.5, lon: 3.4, text: 'Ẹ káàbọ̀', warm: 1 },
-  { name: 'Addis Ababa', lat: 9.0, lon: 38.7, text: 'እንኳን ደህና መጡ', warm: 1 },
-  { name: 'Johannesburg', lat: -26.2, lon: 28.0, text: 'Siyakwamukela', warm: 1 },
-  { name: 'Dakar', lat: 14.7, lon: -17.4, text: 'Bienvenue', warm: 1 },
-  { name: 'Kinshasa', lat: -4.3, lon: 15.3, text: 'Boyei malamu', warm: 1 },
-  { name: 'Lima', lat: -12.0, lon: -77.0, text: 'Allin hamusqayki', warm: 1 },
-  { name: 'São Paulo', lat: -23.5, lon: -46.6, text: 'Bem-vindo', warm: 1 },
-  { name: 'Port-au-Prince', lat: 18.5, lon: -72.3, text: 'Byenvini', warm: 1 },
+  { name: 'Kano', lat: 12.0, lon: 8.5, text: 'Sannu da zuwa', warm: 1 },
+  // Established languages.
+  { name: 'Dakar', lat: 14.7, lon: -17.4, text: 'Bienvenue', warm: 0 },
+  { name: 'São Paulo', lat: -23.5, lon: -46.6, text: 'Bem-vindo', warm: 0 },
+  { name: 'Bogotá', lat: 4.7, lon: -74.1, text: 'Bienvenido', warm: 0 },
   { name: 'Cairo', lat: 30.0, lon: 31.2, text: 'أهلاً وسهلاً', warm: 0 },
-  { name: 'Delhi', lat: 28.6, lon: 77.2, text: 'स्वागत है', warm: 0 },
-  { name: 'Dhaka', lat: 23.8, lon: 90.4, text: 'স্বাগতম', warm: 0 },
-  { name: 'Jakarta', lat: -6.2, lon: 106.8, text: 'Selamat datang', warm: 0 },
-  { name: 'Manila', lat: 14.6, lon: 121.0, text: 'Maligayang pagdating', warm: 0 },
 ];
 
 /**

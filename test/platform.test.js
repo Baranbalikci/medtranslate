@@ -47,8 +47,8 @@ test('catalogue only lists published courses and released, licensed languages', 
   assert.ok(data.courses.every((x) => x.specialty.slug === 'emergency-medicine'));
   assert.ok(!data.courses.some((x) => x.slug === 'pediatric-fever-without-source'), 'draft must not be listed');
   const stroke = data.courses.find((x) => x.slug === 'stroke-first-60-minutes');
-  assert.equal(stroke.languages.length, 45, 'showcase course: original + 44 sample translations');
-  assert.ok(['sw', 'ha', 'am'].every((l) => stroke.languages.includes(l)), 'African sample languages are released');
+  assert.equal(stroke.languages.length, 10, 'showcase course: only launch languages are offered (44 translations exist)');
+  assert.ok(['sw', 'ha', 'yo'].every((l) => stroke.languages.includes(l)) && !stroke.languages.includes('am'), 'Nigeria/Kenya languages released; others hidden for now');
   assert.equal(stroke.accreditation.status, 'not_accredited');
   const de = await c('GET', '/api/courses?language=tr');
   assert.ok(de.data.courses.every((x) => x.languages.includes('tr')));
@@ -205,12 +205,21 @@ test('website translation endpoint is honest when AI is not connected', async ()
   assert.equal((await c('POST', '/api/i18n/translate', { language: 'xx', strings: ['a'] })).status, 400);
 });
 
-test('meta lists 53 languages in five regions incl. Africa and the Americas', async () => {
-  const { data } = await client()('GET', '/api/meta');
-  assert.equal(data.languages.length, 53);
-  assert.deepEqual(data.regions.map((r) => r.code), ['africa', 'americas', 'mena', 'asia', 'europe']);
-  assert.ok(data.languages.filter((l) => l.region === 'africa').length >= 15);
-  assert.ok(['qu', 'gn', 'ay', 'ht'].every((c) => data.languages.some((l) => l.code === c)));
+test('launch languages: established set + Nigeria & Kenya; everything else hidden until an admin widens it', async () => {
+  const pub = client();
+  const { data } = await pub('GET', '/api/meta');
+  assert.deepEqual(data.languages.map((l) => l.code).sort(), ['ar', 'de', 'en', 'es', 'fr', 'ha', 'ig', 'pcm', 'pt', 'sw', 'yo']);
+  assert.deepEqual(data.launch.countries.map((c) => c.code), ['NG', 'KE']);
+  assert.ok(!data.regions.some((r) => r.code === 'asia'), 'empty regions are not offered');
+  assert.deepEqual(data.countries.find((c) => c.code === 'ET').languages, ['en'], 'Amharic etc. are not offered yet');
+  assert.equal((await pub('GET', '/api/courses/stroke-first-60-minutes/cues?lang=am')).status, 404, 'hidden language: no subtitles');
+  assert.equal((await pub('POST', '/api/courses/stroke-first-60-minutes/live-translate', { language: 'qu' })).status, 400);
+  const a = client();
+  await a('POST', '/api/auth/login', { email: 'admin@medtranslate.local', password: 'TestAdmin12345' });
+  assert.equal((await a('PUT', '/api/admin/launch-languages', { all: true })).status, 200);
+  assert.equal((await pub('GET', '/api/meta')).data.languages.length, 54, 'widened: all languages');
+  await a('PUT', '/api/admin/launch-languages', { languages: ['fr', 'es', 'pt', 'de', 'ar', 'sw', 'ha', 'yo', 'ig', 'pcm'] });
+  assert.equal((await pub('GET', '/api/meta')).data.languages.length, 11);
 });
 
 test('learning calendar: plan, move, complete, export, and stay private', async () => {

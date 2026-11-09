@@ -8,7 +8,6 @@ const SENT = {
   tr: [
     ['de', 'Deutsch', 'Bestimmen Sie sofort den Kapillarblutzucker, denn eine Hypoglykämie kann einen Schlaganfall imitieren und ist leicht zu korrigieren.'],
     ['sw', 'Kiswahili', 'Pima sukari ya damu ya kidole mara moja, kwa sababu sukari ya chini inaweza kuiga kiharusi na hurekebishwa kwa urahisi.'],
-    ['qu', 'Runa Simi', 'Chaylla rukana yawarpi azúcarta tupuy, pisi azúcarqa strokman rikch’akunmanmi, hinaspa mana sasachu allichanapaq.'],
   ],
 };
 
@@ -154,7 +153,7 @@ export default {
       () => `<ul class="checks gate">${['Licence covers this language', 'Territory allows the viewer’s country', 'Translation approved by a reviewer', 'Accreditation status shown honestly'].map((t, k) => `<li style="--k:${k}">${'✓'} ${t}</li>`).join('')}</ul>
         <div class="stream"><span><b>≈ 1.2 KB</b> subtitles / min</span><span><b>40 kbps</b> voice</span><span><b>0</b> reloads on switch</span></div>`,
     ];
-    const titles = ['source.cue', 'translate · 3 of 53 languages', 'voice · slot fitting', 'review.decision', 'release.gate'];
+    const titles = ['source.cue', 'translate · launch languages', 'voice · slot fitting', 'review.decision', 'release.gate'];
     let cur = 0; let timer = 0; let paused = false;
     function show(k) {
       cur = k;

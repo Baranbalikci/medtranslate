@@ -177,7 +177,7 @@ function updateHeaderButton() {
   document.documentElement.toggleAttribute('data-rtl', langMeta(lang)?.dir === 'rtl');
 }
 
-const GREETINGS = [['en', 'Medicine speaks every language'], ['sw', 'Tiba inazungumza kila lugha'], ['fr', 'La médecine parle toutes les langues'], ['ar', 'الطب يتحدث كل اللغات'], ['ha', 'Likitanci yana magana da kowane harshe'], ['es', 'La medicina habla todos los idiomas'], ['pt', 'A medicina fala todas as línguas'], ['am', 'ሕክምና ሁሉንም ቋንቋ ይናገራል'], ['qu', 'Hampiqa tukuy simipi rimanmi'], ['hi', 'चिकित्सा हर भाषा बोलती है'], ['zh', '医学说所有的语言'], ['de', 'Medizin spricht jede Sprache']];
+const GREETINGS = [['en', 'Medicine speaks every language'], ['sw', 'Tiba inazungumza kila lugha'], ['fr', 'La médecine parle toutes les langues'], ['ar', 'الطب يتحدث كل اللغات'], ['ha', 'Likitanci yana magana da kowane harshe'], ['es', 'La medicina habla todos los idiomas'], ['pt', 'A medicina fala todas as línguas'], ['de', 'Medizin spricht jede Sprache']];
 
 const REGION_LABEL = { africa: 'Africa', americas: 'Americas', mena: 'Middle East & N. Africa', asia: 'Asia', europe: 'Europe' };
 
@@ -188,7 +188,7 @@ function recommended() {
     const l = m.languages.find((x) => x.code === code);
     if (l && !seen.has(code)) { seen.add(code); out.push(l); }
   }
-  for (const code of ['en', 'sw', 'fr', 'ar']) { const l = m.languages.find((x) => x.code === code); if (l && !seen.has(code) && out.length < 4) { seen.add(code); out.push(l); } }
+  for (const code of ['en', 'sw', 'ha', 'yo']) { const l = m.languages.find((x) => x.code === code); if (l && !seen.has(code) && out.length < 4) { seen.add(code); out.push(l); } }
   return out.slice(0, 4);
 }
 
@@ -208,7 +208,7 @@ export function openChooser({ firstVisit = false } = {}) {
         <div class="txc-brand"><svg width="28" height="28" viewBox="0 0 32 32"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="#0A1A33" stroke="rgba(255,255,255,.18)"/><path d="M9 21V11l7 6 7-6v10" fill="none" stroke="url(#cg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="8" r="2.4" fill="#22D3EE"/></svg><span>Med<b>Translate</b></span></div>
         <div class="txc-globe"><canvas id="txc-canvas"></canvas></div>
         <div class="txc-greet">${GREETINGS.map(([c, t], i) => html`<span style="--i:${i}" dir="${c === 'ar' ? 'rtl' : 'ltr'}">${t}</span>`)}</div>
-        <div class="txc-facts"><span><b>${m.languages.length}</b> languages</span><span><b>${m.languages.filter((l) => l.region === 'africa').length}</b> African</span><span><b>AI</b> subtitles · voice · website</span></div>
+        <div class="txc-facts"><span><b>${m.languages.length}</b> languages</span><span><b>Nigeria</b> &amp; <b>Kenya</b> first</span><span><b>AI</b> subtitles · voice · website</span></div>
       </section>
       <section class="txc-right">
         <header>

@@ -2,6 +2,7 @@
 // accreditation transparency. Every public read path goes through here, so a
 // course or language cannot become visible without the required clearances.
 import { get, all, parseJson } from './db.js';
+import { isLaunchLanguage } from './launch.js';
 
 export const RIGHTS = [
   { key: 'right_use', label: 'Use of the original video' },
@@ -113,6 +114,7 @@ export function availableTracks(course, license) {
   const rows = all("SELECT * FROM translations WHERE course_id = ? AND status = 'released' ORDER BY language", course.id);
   for (const t of rows) {
     if (!license.languages.includes('*') && !license.languages.includes(t.language)) continue;
+    if (!isLaunchLanguage(t.language)) continue; // outside the launch language set: hidden for now
     const qc = get('SELECT is_demo, decision FROM qc_reviews WHERE translation_id = ? ORDER BY id DESC LIMIT 1', t.id);
     tracks.push({
       language: t.language, original: false, subtitles: true,
