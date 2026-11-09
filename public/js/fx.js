@@ -44,13 +44,13 @@ function splitWords(el) {
 }
 
 function countUp(el) {
-  const target = Number(el.dataset.count);
+  const target = Number(el.dataset.count); const dec = Number(el.dataset.dec || 0);
   if (!Number.isFinite(target) || reduce()) { el.textContent = el.dataset.count + (el.dataset.suffix || ''); return; }
   const t0 = performance.now(); const dur = 1400;
   const step = (now) => {
     const p = Math.min(1, (now - t0) / dur);
     const eased = 1 - Math.pow(1 - p, 4);
-    el.textContent = Math.round(target * eased) + (el.dataset.suffix || '');
+    el.textContent = (target * eased).toFixed(dec) + (el.dataset.suffix || '');
     if (p < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -70,7 +70,22 @@ function onScroll() {
       if (!el.isConnected) { tracked.delete(el); continue; }
       const r = el.getBoundingClientRect();
       if (r.bottom < -200 || r.top > vh + 200) continue;
-      if (el.dataset.fxScroll === 'hero') {
+      if (el.dataset.parallax) { el.style.setProperty('--py', `${(-(r.top + r.height / 2 - vh / 2) * Number(el.dataset.parallax)).toFixed(1)}px`); if (el.dataset.fxScroll == null) continue; }
+      const mode = el.dataset.fxScroll;
+      if (mode === 'stack') {
+        // Cards pile up: each card shrinks and dims a little as the next one slides over it.
+        const kids = [...el.children];
+        kids.forEach((k, i) => {
+          const nx = kids[i + 1];
+          const cover = nx ? Math.min(1, Math.max(0, (vh * 0.85 - nx.getBoundingClientRect().top) / (vh * 0.55))) : 0;
+          k.style.setProperty('--cv', cover.toFixed(3));
+        });
+      } else if (mode === 'hscroll') {
+        const track = el.querySelector('.hs-track');
+        const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
+        el.style.setProperty('--hp', p.toFixed(3));
+        if (!el.classList.contains('hs-native')) track.style.transform = `translate3d(${(-p * Math.max(0, track.scrollWidth - el.clientWidth)).toFixed(1)}px,0,0)`;
+      } else if (mode === 'hero') {
         // 0 at rest → 1 when the hero has scrolled away
         el.style.setProperty('--hp', Math.min(1, Math.max(0, -r.top / Math.max(1, r.height))).toFixed(3));
       } else {
@@ -109,7 +124,8 @@ function start() {
   bar.setAttribute('aria-hidden', 'true');
   (document.getElementById('header') || document.body).append(bar); // part of the header, never floating
   addEventListener('scroll', onScroll, { passive: true });
-  addEventListener('resize', onScroll, { passive: true });
+  addEventListener('resize', () => { sizeHScroll(); onScroll(); }, { passive: true });
+  addEventListener('load', () => { sizeHScroll(); onScroll(); });
   document.addEventListener('pointermove', onPointer, { passive: true });
   document.addEventListener('pointerout', onPointerOut, { passive: true });
   // Content rendered asynchronously (course grids, dashboards) gets the same effects.
@@ -119,6 +135,17 @@ function start() {
     cancelAnimationFrame(pending);
     pending = requestAnimationFrame(() => initFx(main));
   }).observe(main, { childList: true, subtree: true });
+}
+
+function sizeHScroll() {
+  for (const el of tracked) {
+    if (el.dataset.fxScroll !== 'hscroll') continue;
+    const track = el.querySelector('.hs-track');
+    const native = reduce() || innerWidth < 900;
+    el.classList.toggle('hs-native', native);
+    if (native) { el.style.height = ''; track.style.transform = ''; continue; }
+    el.style.height = `${Math.round(Math.max(0, track.scrollWidth - el.clientWidth) + innerHeight * 1.1)}px`;
+  }
 }
 
 /** Call after every page render. */
@@ -131,7 +158,8 @@ export function initFx(root) {
   root.querySelectorAll('.course-card, .feature, .plan, .spec-card').forEach((c) => { if (!c.dataset.tilt) c.dataset.tilt = c.classList.contains('feature') ? '4' : '6'; });
   const targets = root.querySelectorAll('.reveal:not(.in), [data-fx]:not(.in), [data-count]:not(.in)');
   targets.forEach((el) => (io && !reduce() ? io.observe(el) : (el.classList.add('in'), el.dataset.count != null && countUp(el))));
-  root.querySelectorAll('[data-fx-scroll]').forEach((el) => tracked.add(el));
+  root.querySelectorAll('[data-fx-scroll], [data-parallax]').forEach((el) => tracked.add(el));
+  sizeHScroll();
   onScroll();
 }
 

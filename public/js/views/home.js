@@ -72,17 +72,45 @@ export default {
           <h2 data-fx="words">When time is the treatment, language is a delay.</h2>
           <p class="reveal" data-fx="blur">We start where a misunderstood sentence costs the most, and where the teaching travels best across borders.</p>
         </div>
-        <div class="grid-3" data-stagger>
+        <div class="stack" data-fx-scroll="stack">
           ${[
-            ['clock', 'Minutes matter', 'Recognition and first-hour care decide outcomes in stroke, sepsis, cardiac and airway emergencies. Teams need to understand the lesson the first time.'],
-            ['globe', 'Protocols travel', 'Emergency pathways are built on shared evidence and checklists, so a well-translated lesson is useful in Nairobi, Lima and Berlin alike.'],
-            ['layers', 'Short and focused', 'Compact modules fit between shifts and are quick to translate, review and release one language at a time.'],
-          ].map(([i, t, d]) => html`<div class="feature"><div class="ic">${icon(i, 22)}</div><h3>${t}</h3><p>${d}</p></div>`)}
+            ['01', 'clock', 'Minutes matter', 'Recognition and first-hour care decide outcomes in stroke, sepsis, cardiac and airway emergencies. Teams need to understand the lesson the first time.', '#FB7185', 'ring'],
+            ['02', 'globe', 'Protocols travel', 'Emergency pathways are built on shared evidence and checklists, so a well-translated lesson is useful in Nairobi, Lima and Berlin alike.', '#22D3EE', 'orbit'],
+            ['03', 'layers', 'Short and focused', 'Compact modules fit between shifts and are quick to translate, review and release one language at a time.', '#FBBF24', 'bars'],
+          ].map(([n, i, t, d, ac, art], k) => html`<article class="stack-card" style="--i:${k};--ac:${ac}">
+            <div class="sc-copy"><span class="sc-num">${n}</span><div class="ic">${icon(i, 24)}</div><h3>${t}</h3><p>${d}</p></div>
+            <div class="sc-art" aria-hidden="true" data-parallax="0.06">${art === 'ring'
+              ? html`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" class="r0"/><circle cx="100" cy="100" r="78" class="r1" pathLength="100"/><path d="M100 54v48l30 18" class="hand"/></svg>`
+              : art === 'orbit'
+                ? html`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="30" class="r1"/><ellipse cx="100" cy="100" rx="86" ry="34" class="r0"/><ellipse cx="100" cy="100" rx="86" ry="34" class="r0" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="86" ry="34" class="r0" transform="rotate(120 100 100)"/><circle cx="186" cy="100" r="6" class="dot"/><circle cx="57" cy="25" r="6" class="dot"/><circle cx="57" cy="175" r="6" class="dot"/></svg>`
+                : html`<svg viewBox="0 0 200 200"><rect x="30" y="118" width="26" height="54" rx="7" class="bar"/><rect x="66" y="92" width="26" height="80" rx="7" class="bar"/><rect x="102" y="62" width="26" height="110" rx="7" class="bar"/><rect x="138" y="34" width="26" height="138" rx="7" class="bar hi"/></svg>`}</div>
+          </article>`)}
         </div>
+      </div>
+    </section>
+
+    <section class="section pulse" id="evidence" data-fx-scroll="draw">
+      <svg class="pulse-line" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M0 90 H300 l14 -6 l14 6 H420 l10 12 l16 -86 l18 120 l12 -46 H640 q28 -42 56 0 H1200"/></svg>
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow reveal">The scale of the problem</span>
+          <h2 data-fx="words">Minutes and misread signs decide who goes home.</h2>
+          <p class="reveal" data-fx="blur">Missed or late recognition is not a rare accident. Published studies put numbers on it.</p>
+        </div>
+        <div class="evi-grid" data-stagger>
+          ${[
+            ['1.9', 1.9, 1, ' M', 'million neurons lost every minute', 'An untreated large-vessel stroke can destroy about 1.9 million neurons per minute. Faster recognition means more brain saved.', 'Saver JL. Time is brain – quantified. Stroke 2006;37:263–266.', '#A78BFA'],
+            ['7.6', 7.6, 1, ' %', 'less survival per hour of delay', 'In septic shock, each hour of delay in starting effective antimicrobial treatment was linked to an average 7.6 % lower survival.', 'Kumar A et al. Crit Care Med 2006;34:1589–1596.', '#FBBF24'],
+            ['795', 795, 0, ',000', 'harmed by diagnostic error – every year', 'A US estimate of people who die or are permanently disabled each year because of diagnostic error across care settings.', 'Newman-Toker DE et al. BMJ Qual Saf 2024;33:109–120.', '#FB7185'],
+          ].map(([txt, v, dec, suf, cap, body, src, ac]) => html`<article class="evi-card" style="--ac:${ac}">
+            <div class="evi-num"><span data-count="${v}" data-dec="${dec}" data-suffix="${suf}">${txt}${suf}</span></div>
+            <h3>${cap}</h3><p>${body}</p><small>${src}</small></article>`)}
+        </div>
+        <p class="evi-note reveal">${icon('info', 14)} Published estimates, mostly from high-income health systems: they show the scale of the problem, not a forecast for any single clinic. Individual case reports appear here only with a verifiable, anonymised source. Editorial and legal review is pending before launch.</p>
       </div>
     </section>` : ''}
 
-    <section class="section" id="platform">
+    <section class="section curtain" id="platform" data-fx-scroll="curtain">
       <div class="container">
         <div class="section-head">
           <span class="eyebrow reveal">The platform</span>
@@ -142,7 +170,7 @@ export default {
       </div>
     </section>
 
-    <section class="section languages-band">
+    <section class="section languages-band curtain" data-fx-scroll="curtain">
       <div class="container center">
         <div class="section-head center">
           <span class="eyebrow reveal">Languages</span>
@@ -188,16 +216,19 @@ export default {
       </div>
     </section>
 
-    <section class="section">
-      <div class="container">
-        <div class="row between" style="margin-bottom:32px;align-items:flex-end">
-          <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Learn by emergency topic' : 'Learn across the full breadth of medicine'}</h2></div>
-          <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
-        </div>
-        <div class="spec-grid" data-stagger>
-          ${(focus ? topics : m.specialties).map((s) => html`<a class="spec" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'}"><span class="ic">${specIcon(s.icon)}</span><span><b>${s.name}</b><small>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</small></span></a>`)}
-        </div>
+    <section class="reel-sec">
+      <div class="container reel-head">
+        <div class="section-head" style="margin:0"><span class="eyebrow reveal">${focus ? 'Emergency medicine' : 'Medical specialties'}</span><h2 data-fx="words">${focus ? 'Pick the emergency your team faces' : 'Learn across the full breadth of medicine'}</h2><p class="reveal" data-fx="blur">Keep scrolling – the topics slide past.</p></div>
+        <a href="${focus ? '/topics' : '/specialties'}" class="btn btn-ghost reveal">${focus ? 'All topics' : 'All specialties'} ${icon('arrow', 16)}</a>
       </div>
+      <div class="hs" data-fx-scroll="hscroll"><div class="hs-sticky"><div class="hs-track">
+        ${(focus ? topics : m.specialties).map((s, k) => html`<a class="reel-tile" href="/${focus ? 'topics' : 'specialties'}/${s.slug}" style="--ac:${s.accent || '#22D3EE'};--k:${k}">
+          <span class="rt-glow" aria-hidden="true"></span><span class="rt-n">${String(k + 1).padStart(2, '0')}</span>
+          <span class="rt-ic">${icon(s.icon || 'stethoscope', 38)}</span>
+          <h3>${s.name}</h3><p>${s.description || ''}</p>
+          <span class="rt-foot"><b>${s.course_count ? `${s.course_count} course${s.course_count > 1 ? 's' : ''}` : 'Coming soon'}</b><span class="rt-go">${icon('arrow', 18)}</span></span></a>`)}
+        <a class="reel-tile reel-end" href="${focus ? '/topics' : '/specialties'}"><h3>All topics</h3><span class="rt-go">${icon('arrow', 22)}</span></a>
+      </div></div></div>
     </section>
 
     <section class="section alt">
